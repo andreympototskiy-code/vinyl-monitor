@@ -37,6 +37,7 @@ bot.log
 # Environment and secrets
 .env
 .env.*
+!.env.example
 
 # App state
 state.json
