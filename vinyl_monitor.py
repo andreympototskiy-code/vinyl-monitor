@@ -52,7 +52,7 @@ def send_telegram(text: str) -> None:
             json={
                 "chat_id": TELEGRAM_CHAT_ID,
                 "text": text,
-                "parse_mode": "HTML",
+                "parse_mode": "Markdown",
                 "disable_web_page_preview": True,
             },
             timeout=REQUEST_TIMEOUT_SEC,
@@ -288,22 +288,28 @@ def main():
         tap_items = [it for it in new_ids if it.get("source") == "vinyltap.co.uk"]
 
         if kor_items:
-            lines.append("korobkavinyla.ru:")
+            lines.append("🎵 korobkavinyla.ru:")
             for it in kor_items:
                 title = it.get('title','(без названия)')
-                price = f" — {it['price']}" if it.get('price') else ''
+                price = it.get('price', 'Цена не указана')
                 url = it['url']
                 safe_title = escape(title)
-                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price}")
+                lines.append(f"• {safe_title}")
+                lines.append(f"💰 Цена: {price}")
+                lines.append(f"🔗 [Ссылка]({url})")
+                lines.append("")
 
         if tap_items:
-            lines.append("vinyltap.co.uk:")
+            lines.append("🎵 vinyltap.co.uk:")
             for it in tap_items:
                 title = it.get('title','(без названия)')
-                price = f" — {it['price']}" if it.get('price') else ''
+                price = it.get('price', 'Цена не указана')
                 url = it['url']
                 safe_title = escape(title)
-                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price}")
+                lines.append(f"• {safe_title}")
+                lines.append(f"💰 Цена: {price}")
+                lines.append(f"🔗 [Ссылка]({url})")
+                lines.append("")
 
         message = "\n".join(lines)
         for chunk in chunk_messages(message):
