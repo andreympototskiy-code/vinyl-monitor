@@ -16,7 +16,10 @@ if USE_PLAYWRIGHT:
 
 CATALOG_URL = os.getenv("CATALOG_URL", "https://korobkavinyla.ru/catalog")
 VINYLTAP_URL = os.getenv("VINYLTAP_URL", "https://vinyltap.co.uk/collections/new-arrivals?sort_by=created-descending&filter.p.m.vinyltap.format=Vinyl+-+All&filter.p.m.vinyltap.condition=New&filter.v.price.gte=&filter.v.price.lte=")
-AVITO_URL = os.getenv("AVITO_URL", "https://www.avito.ru/sankt_peterburg_i_lo?cd=1&geoCoords=59.984574%2C30.355452&q=винил+пластинка+lp&radius=50&searchRadius=50")
+AVITO_URLS = [
+    os.getenv("AVITO_URL_POTF", "https://www.avito.ru/sankt_peterburg_i_lo?cd=1&geoCoords=59.984574%2C30.355452&q=poets+of+the+fall+lp&radius=50&searchRadius=50"),
+    os.getenv("AVITO_URL_HP", "https://www.avito.ru/sankt_peterburg_i_lo?cd=1&geoCoords=59.984574%2C30.355452&q=harry+potter+lp&radius=50&searchRadius=50")
+]
 STATE_PATH = Path(os.getenv("STATE_PATH", "./state.json")).expanduser().resolve()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -342,7 +345,8 @@ def main():
     if USE_PLAYWRIGHT:
         items.extend(safe_scrape(scrape_with_playwright, CATALOG_URL))
         items.extend(safe_scrape(scrape_vinyltap_with_playwright, VINYLTAP_URL))
-        items.extend(safe_scrape(scrape_avito_with_playwright, AVITO_URL))
+        for avito_url in AVITO_URLS:
+            items.extend(safe_scrape(scrape_avito_with_playwright, avito_url))
     else:
         items = []
 
@@ -377,12 +381,27 @@ def main():
 
         if avito_items:
             lines.append("🏠 avito.ru:")
-            for it in avito_items:
-                title = it.get('title','(без названия)')
-                price = it.get('price', 'Цена не указана')
-                url = it['url']
-                safe_title = escape(title)
-                lines.append(f"• {safe_title} - {price} - [Ссылка]({url})")
+            # Разделяем по поисковым запросам
+            potf_items = [it for it in avito_items if 'poets of the fall' in it.get('title', '').lower()]
+            hp_items = [it for it in avito_items if 'harry potter' in it.get('title', '').lower()]
+            
+            if potf_items:
+                lines.append("  🎵 Poets of the Fall:")
+                for it in potf_items:
+                    title = it.get('title','(без названия)')
+                    price = it.get('price', 'Цена не указана')
+                    url = it['url']
+                    safe_title = escape(title)
+                    lines.append(f"  • {safe_title} - {price} - [Ссылка]({url})")
+            
+            if hp_items:
+                lines.append("  🧙 Harry Potter:")
+                for it in hp_items:
+                    title = it.get('title','(без названия)')
+                    price = it.get('price', 'Цена не указана')
+                    url = it['url']
+                    safe_title = escape(title)
+                    lines.append(f"  • {safe_title} - {price} - [Ссылка]({url})")
 
         message = "\n".join(lines)
         for chunk in chunk_messages(message):
