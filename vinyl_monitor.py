@@ -65,6 +65,21 @@ def send_telegram(text: str) -> None:
         print(f"Failed to send Telegram: {e}")
 
 
+def clean_price(price: str) -> str:
+    """Очищает цену от дублирующихся частей"""
+    if not price:
+        return price
+    
+    # Убираем дублирующиеся части
+    price = price.replace("Regular price", "").replace("Sale price", "").replace("Unit price / per", "")
+    # Убираем лишние пробелы и переносы строк
+    price = " ".join(price.split())
+    # Убираем лишние дефисы и точки
+    price = price.strip(" -")
+    
+    return price
+
+
 def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
     seen = set()
     out = []
@@ -72,6 +87,9 @@ def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
         key = it.get("id") or it.get("url")
         if key and key not in seen:
             seen.add(key)
+            # Очищаем цену от дублирующихся частей
+            if "price" in it:
+                it["price"] = clean_price(it["price"])
             out.append(it)
     return out
 
