@@ -16,6 +16,7 @@ if USE_PLAYWRIGHT:
 
 CATALOG_URL = os.getenv("CATALOG_URL", "https://korobkavinyla.ru/catalog")
 VINYLTAP_URL = os.getenv("VINYLTAP_URL", "https://vinyltap.co.uk/collections/new-arrivals?sort_by=created-descending&filter.p.m.vinyltap.format=Vinyl+-+All&filter.p.m.vinyltap.condition=New&filter.v.price.gte=&filter.v.price.lte=")
+AVITO_URL = os.getenv("AVITO_URL", "https://www.avito.ru/sankt_peterburg_i_lo?cd=1&geoCoords=59.984574%2C30.355452&q=винил+пластинка+lp&radius=50&searchRadius=50")
 STATE_PATH = Path(os.getenv("STATE_PATH", "./state.json")).expanduser().resolve()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -267,6 +268,73 @@ def scrape_vinyltap_with_playwright(url: str) -> List[Dict]:
         return items
 
 
+def extract_avito_from_dom(page) -> List[Dict]:
+    js = r"""
+    () => {
+      const items = [];
+      const anchors = Array.from(document.querySelectorAll('a[data-marker="item-title"]'));
+      
+      for (const a of anchors) {
+        const url = a.href;
+        if (!url || !url.includes('/sankt_peterburg_i_lo/')) continue;
+        
+        let title = a.textContent.trim();
+        if (!title) continue;
+        
+        // Ищем цену в родительском элементе
+        let price = '';
+        let parent = a.closest('[data-marker="item"]');
+        if (parent) {
+          const priceEl = parent.querySelector('[data-marker="item-price"]');
+          if (priceEl) {
+            price = priceEl.textContent.trim();
+          }
+        }
+        
+        items.push({
+          id: url,
+          url: url,
+          title: title,
+          price: price
+        });
+      }
+      return items;
+    }
+    """
+    items = page.evaluate(js)
+    return dedupe_keep_order(items)
+
+
+def scrape_avito_with_playwright(url: str) -> List[Dict]:
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(locale="ru-RU")
+        page = context.new_page()
+        page.set_default_timeout(REQUEST_TIMEOUT_SEC * 1000)
+        
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=REQUEST_TIMEOUT_SEC * 1000)
+            time.sleep(2)
+            
+            # Прокручиваем страницу для загрузки всех элементов
+            for _ in range(3):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                time.sleep(1)
+            
+            items = extract_avito_from_dom(page)
+            context.close()
+            browser.close()
+            
+            for it in items:
+                it["source"] = "avito.ru"
+            return items
+        except Exception as e:
+            print(f"Avito scrape error: {e}")
+            context.close()
+            browser.close()
+            return []
+
+
 def main():
     known = load_state()
 
@@ -274,6 +342,7 @@ def main():
     if USE_PLAYWRIGHT:
         items.extend(safe_scrape(scrape_with_playwright, CATALOG_URL))
         items.extend(safe_scrape(scrape_vinyltap_with_playwright, VINYLTAP_URL))
+        items.extend(safe_scrape(scrape_avito_with_playwright, AVITO_URL))
     else:
         items = []
 
@@ -286,6 +355,7 @@ def main():
         lines = ["Новые позиции:"]
         kor_items = [it for it in new_ids if it.get("source") == "korobkavinyla.ru"]
         tap_items = [it for it in new_ids if it.get("source") == "vinyltap.co.uk"]
+        avito_items = [it for it in new_ids if it.get("source") == "avito.ru"]
 
         if kor_items:
             lines.append("🎵 korobkavinyla.ru:")
@@ -299,6 +369,15 @@ def main():
         if tap_items:
             lines.append("🎵 vinyltap.co.uk:")
             for it in tap_items:
+                title = it.get('title','(без названия)')
+                price = it.get('price', 'Цена не указана')
+                url = it['url']
+                safe_title = escape(title)
+                lines.append(f"• {safe_title} - {price} - [Ссылка]({url})")
+
+        if avito_items:
+            lines.append("🏠 avito.ru:")
+            for it in avito_items:
                 title = it.get('title','(без названия)')
                 price = it.get('price', 'Цена не указана')
                 url = it['url']
