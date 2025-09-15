@@ -15,7 +15,7 @@ if USE_PLAYWRIGHT:
     from playwright.sync_api import sync_playwright
 
 CATALOG_URL = os.getenv("CATALOG_URL", "https://korobkavinyla.ru/catalog")
-VINYLTAP_URL = os.getenv("VINYLTAP_URL", "https://vinyltap.co.uk/collections/new-arrivals")
+VINYLTAP_URL = os.getenv("VINYLTAP_URL", "https://vinyltap.co.uk/collections/new-arrivals?sort_by=created-descending&filter.p.m.vinyltap.format=Vinyl+-+All&filter.p.m.vinyltap.condition=New&filter.v.price.gte=&filter.v.price.lte=")
 STATE_PATH = Path(os.getenv("STATE_PATH", "./state.json")).expanduser().resolve()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
