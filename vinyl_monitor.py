@@ -294,10 +294,7 @@ def main():
                 price = it.get('price', 'Цена не указана')
                 url = it['url']
                 safe_title = escape(title)
-                lines.append(f"• {safe_title}")
-                lines.append(f"💰 Цена: {price}")
-                lines.append(f"🔗 [Ссылка]({url})")
-                lines.append("")
+                lines.append(f"• {safe_title} - {price} - [Ссылка]({url})")
 
         if tap_items:
             lines.append("🎵 vinyltap.co.uk:")
@@ -306,10 +303,7 @@ def main():
                 price = it.get('price', 'Цена не указана')
                 url = it['url']
                 safe_title = escape(title)
-                lines.append(f"• {safe_title}")
-                lines.append(f"💰 Цена: {price}")
-                lines.append(f"🔗 [Ссылка]({url})")
-                lines.append("")
+                lines.append(f"• {safe_title} - {price} - [Ссылка]({url})")
 
         message = "\n".join(lines)
         for chunk in chunk_messages(message):
