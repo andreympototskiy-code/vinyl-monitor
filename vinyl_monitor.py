@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import re
 from pathlib import Path
 from typing import List, Dict, Set
 
@@ -26,6 +27,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 REQUEST_TIMEOUT_SEC = 60
 LOAD_MORE_MAX_CLICKS = 20
 LOAD_MORE_WAIT_MS = 1200
+LOCK_PATH = Path(os.getenv("LOCK_PATH", "/tmp/vinyl_monitor.lock")).expanduser().resolve()
 
 
 def load_state() -> Set[str]:
@@ -77,6 +79,18 @@ def clean_price(price: str) -> str:
     # Убираем лишние дефисы и точки
     price = price.strip(" -")
     
+    # Если строка состоит из двух одинаковых половин, оставляем одну
+    tokens = price.split()
+    if len(tokens) % 2 == 0 and len(tokens) > 0:
+        half = len(tokens) // 2
+        if tokens[:half] == tokens[half:]:
+            price = " ".join(tokens[:half])
+    
+    # Частные случаи двойных цен вида "€49,95 EUR €49,95 EUR" уже покрыты, но подстрахуемся по шаблону
+    m = re.match(r"^(.*) \1$", price)
+    if m:
+        price = m.group(1)
+    
     return price
 
 
@@ -92,6 +106,51 @@ def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
                 it["price"] = clean_price(it["price"])
             out.append(it)
     return out
+
+
+def escape_markdown(text: str) -> str:
+    """Экранирует спецсимволы Telegram Markdown (не V2) в произвольном тексте."""
+    if not text:
+        return text
+    # Порядок важен: сначала экранируем обратный слеш
+    text = text.replace("\\", "\\\\")
+    for ch in ["_", "*", "`", "["]:
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
+def acquire_lock():
+    """Создаёт lock-файл, чтобы не было параллельных запусков."""
+    try:
+        fd = os.open(str(LOCK_PATH), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        return fd
+    except FileExistsError:
+        # Проверяем, не протух ли лок (30 минут)
+        try:
+            st = LOCK_PATH.stat()
+            if time.time() - st.st_mtime > 1800:
+                try:
+                    LOCK_PATH.unlink()
+                except FileNotFoundError:
+                    pass
+                fd = os.open(str(LOCK_PATH), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, str(os.getpid()).encode())
+                return fd
+        except Exception:
+            pass
+        return None
+
+
+def release_lock(fd) -> None:
+    try:
+        os.close(fd)
+    except Exception:
+        pass
+    try:
+        LOCK_PATH.unlink()
+    except FileNotFoundError:
+        pass
 
 
 def extract_items_from_dom(page) -> List[Dict]:
@@ -357,6 +416,11 @@ def scrape_avito_with_playwright(url: str) -> List[Dict]:
 
 
 def main():
+    lock_fd = acquire_lock()
+    if lock_fd is None:
+        print("Already running. Exit.")
+        return
+    
     known = load_state()
 
     items: List[Dict] = []
@@ -374,6 +438,9 @@ def main():
     new_ids = [it for it in items if it["id"] not in known]
 
     if new_ids:
+        # Сохраняем состояние заранее, чтобы параллельные/повторные запуски не дублировали уведомления
+        save_state(known.union(current_ids))
+        
         lines = ["Новые позиции:"]
         kor_items = [it for it in new_ids if it.get("source") == "korobkavinyla.ru"]
         tap_items = [it for it in new_ids if it.get("source") == "vinyltap.co.uk"]
@@ -385,7 +452,7 @@ def main():
                 title = it.get('title','(без названия)')
                 price = it.get('price', 'Цена не указана')
                 url = it['url']
-                safe_title = escape(title)
+                safe_title = escape_markdown(title)
                 lines.append(f"• {safe_title} - {price} - [Ссылка]({url})")
 
         if tap_items:
@@ -394,7 +461,7 @@ def main():
                 title = it.get('title','(без названия)')
                 price = it.get('price', 'Цена не указана')
                 url = it['url']
-                safe_title = escape(title)
+                safe_title = escape_markdown(title)
                 lines.append(f"• {safe_title} - {price} - [Ссылка]({url})")
 
         if avito_items:
@@ -409,7 +476,7 @@ def main():
                     title = it.get('title','(без названия)')
                     price = it.get('price', 'Цена не указана')
                     url = it['url']
-                    safe_title = escape(title)
+                    safe_title = escape_markdown(title)
                     lines.append(f"  • {safe_title} - {price} - [Ссылка]({url})")
             
             if hp_items:
@@ -418,16 +485,18 @@ def main():
                     title = it.get('title','(без названия)')
                     price = it.get('price', 'Цена не указана')
                     url = it['url']
-                    safe_title = escape(title)
+                    safe_title = escape_markdown(title)
                     lines.append(f"  • {safe_title} - {price} - [Ссылка]({url})")
 
         message = "\n".join(lines)
         for chunk in chunk_messages(message):
             send_telegram(chunk)
-        save_state(known.union(current_ids))
         print(f"Найдено новых: {len(new_ids)}")
     else:
         print("Новых позиций не найдено.")
+    
+    # Освобождаем лок в любом случае
+    release_lock(lock_fd)
 
 
 if __name__ == "__main__":
