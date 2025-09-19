@@ -426,8 +426,8 @@ class TestAdvancedDeduplication:
         assert "Different Item" in titles
 
 
-class TestScrapingFunctions:
-    """Тесты для функций скрапинга"""
+class TestAdditionalScrapingFunctions:
+    """Дополнительные тесты для функций скрапинга"""
 
     def test_extract_items_from_dom_empty(self):
         """Тест извлечения элементов из пустой страницы"""
@@ -1029,8 +1029,8 @@ class TestAdditionalVinylMonitor:
             pass
 
 
-class TestScrapingFunctions:
-    """Тесты для функций скрапинга"""
+class TestScrapingFunctionsExtended:
+    """Расширенные тесты для функций скрапинга"""
 
     @patch('vinyl_monitor.sync_playwright')
     @patch('vinyl_monitor.should_monitor_site')
@@ -1045,11 +1045,11 @@ class TestScrapingFunctions:
         mock_browser = MagicMock()
         mock_context = MagicMock()
         mock_page = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем результат поиска
         mock_page.evaluate.return_value = [
             {
@@ -1068,10 +1068,10 @@ class TestScrapingFunctions:
                 "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
                 "category": "kollektsionirovanie"
             }
-            
+
             with patch('vinyl_monitor.update_last_check_time') as mock_update:
                 result = scrape_avito_with_playwright()
-                
+
                 assert len(result) == 1
                 assert result[0]["title"] == "Test Vinyl LP"
                 assert result[0]["source"] == "avito.ru"
@@ -1093,10 +1093,10 @@ class TestScrapingFunctions:
                 "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
                 "category": "kollektsionirovanie"
             }
-            
+
             with patch('vinyl_monitor.update_last_check_time') as mock_update:
                 result = scrape_avito_with_playwright()
-                
+
                 assert len(result) == 0
                 mock_update.assert_called_once_with("avito")
 
@@ -1115,8 +1115,8 @@ class TestScrapingFunctions:
                 "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
                 "category": "kollektsionirovanie"
             }
-            
-            with patch('vinyl_monitor.update_last_check_time') as mock_update:
+
+            with patch('vinyl_monitor.update_last_check_time'):
                 # Функция должна обрабатывать исключения
                 try:
                     result = scrape_avito_with_playwright()
@@ -1136,11 +1136,11 @@ class TestScrapingFunctions:
         mock_browser = MagicMock()
         mock_context = MagicMock()
         mock_page = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем результат извлечения
         with patch('vinyl_monitor.extract_items_from_dom') as mock_extract:
             mock_extract.return_value = [
@@ -1151,9 +1151,9 @@ class TestScrapingFunctions:
                     "price": "1000 руб"
                 }
             ]
-            
+
             result = scrape_with_playwright()
-            
+
             assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "korobkavinyla.ru" for item in result)
 
@@ -1164,7 +1164,7 @@ class TestScrapingFunctions:
 
         # Мокаем Playwright с исключением
         mock_playwright.side_effect = Exception("Playwright error")
-        
+
         # Функция должна обрабатывать исключения
         try:
             result = scrape_with_playwright()
@@ -1182,11 +1182,11 @@ class TestScrapingFunctions:
         mock_browser = MagicMock()
         mock_context = MagicMock()
         mock_page = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем результат извлечения
         with patch('vinyl_monitor.extract_vinyltap_from_dom') as mock_extract:
             mock_extract.return_value = [
@@ -1197,9 +1197,9 @@ class TestScrapingFunctions:
                     "price": "€20.00"
                 }
             ]
-            
+
             result = scrape_vinyltap_with_playwright()
-            
+
             assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "vinyltap.co.uk" for item in result)
 
@@ -1210,7 +1210,7 @@ class TestScrapingFunctions:
 
         # Мокаем Playwright с исключением
         mock_playwright.side_effect = Exception("Playwright error")
-        
+
         # Функция должна обрабатывать исключения
         try:
             result = scrape_vinyltap_with_playwright()
@@ -1236,11 +1236,11 @@ class TestAdditionalScrapingTests:
         mock_browser = MagicMock()
         mock_context = MagicMock()
         mock_page = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем исключение при page.goto
         mock_page.goto.side_effect = Exception("Network error")
 
@@ -1251,10 +1251,10 @@ class TestAdditionalScrapingTests:
                 "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
                 "category": "kollektsionirovanie"
             }
-            
+
             with patch('vinyl_monitor.update_last_check_time') as mock_update:
                 result = scrape_avito_with_playwright()
-                
+
                 assert len(result) == 0
                 mock_update.assert_called_once_with("avito")
 
@@ -1272,9 +1272,9 @@ class TestAdditionalScrapingTests:
                 "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
                 "category": "kollektsionirovanie"
             }
-            
+
             result = scrape_avito_with_playwright()
-            
+
             assert len(result) == 0
             # should_monitor_site не должен вызываться если отключен
             mock_should_monitor.assert_not_called()
@@ -1296,9 +1296,9 @@ class TestAdditionalScrapingTests:
                 "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
                 "category": "kollektsionirovanie"
             }
-            
+
             result = scrape_avito_with_playwright()
-            
+
             assert len(result) == 0
             mock_should_monitor.assert_called_once_with("avito", 6)
 
@@ -1311,16 +1311,16 @@ class TestAdditionalScrapingTests:
         mock_browser = MagicMock()
         mock_context = MagicMock()
         mock_page = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем исключение при page.goto
         mock_page.goto.side_effect = Exception("Network error")
-        
+
         result = scrape_with_playwright()
-        
+
         assert len(result) == 0
 
     @patch('vinyl_monitor.sync_playwright')
@@ -1333,16 +1333,16 @@ class TestAdditionalScrapingTests:
         mock_context = MagicMock()
         mock_page = MagicMock()
         mock_btn = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more
         mock_page.locator.return_value.or_.return_value.or_.return_value = mock_btn
         mock_btn.count.return_value = 1
         mock_btn.first = MagicMock()
-        
+
         # Мокаем результат извлечения
         with patch('vinyl_monitor.extract_items_from_dom') as mock_extract:
             mock_extract.return_value = [
@@ -1353,9 +1353,9 @@ class TestAdditionalScrapingTests:
                     "price": "1000 руб"
                 }
             ]
-            
+
             result = scrape_with_playwright()
-            
+
             assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "korobkavinyla.ru" for item in result)
 
@@ -1369,16 +1369,16 @@ class TestAdditionalScrapingTests:
         mock_context = MagicMock()
         mock_page = MagicMock()
         mock_btn = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more
         mock_page.locator.return_value.or_.return_value.or_.return_value = mock_btn
         mock_btn.count.return_value = 1
         mock_btn.first = MagicMock()
-        
+
         # Мокаем результат извлечения
         with patch('vinyl_monitor.extract_vinyltap_from_dom') as mock_extract:
             mock_extract.return_value = [
@@ -1389,9 +1389,9 @@ class TestAdditionalScrapingTests:
                     "price": "€20.00"
                 }
             ]
-            
+
             result = scrape_vinyltap_with_playwright()
-            
+
             assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "vinyltap.co.uk" for item in result)
 
@@ -1404,17 +1404,17 @@ class TestAdditionalScrapingTests:
         mock_browser = MagicMock()
         mock_context = MagicMock()
         mock_page = MagicMock()
-        
+
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем исключение при извлечении
         with patch('vinyl_monitor.extract_vinyltap_from_dom') as mock_extract:
             mock_extract.side_effect = Exception("Extraction error")
-            
+
             result = scrape_vinyltap_with_playwright()
-            
+
             assert len(result) == 0
 
 
@@ -1426,7 +1426,7 @@ class TestDOMExtractionFunctions:
         from vinyl_monitor import extract_items_from_dom
 
         mock_page = MagicMock()
-        
+
         # Мокаем результат извлечения
         mock_page.evaluate.return_value = [
             {
@@ -1444,7 +1444,7 @@ class TestDOMExtractionFunctions:
         ]
 
         result = extract_items_from_dom(mock_page)
-        
+
         assert len(result) == 2
         assert result[0]["title"] == "Test Item 1"
         assert result[1]["title"] == "Test Item 2"
@@ -1454,7 +1454,7 @@ class TestDOMExtractionFunctions:
         from vinyl_monitor import extract_vinyltap_from_dom
 
         mock_page = MagicMock()
-        
+
         # Мокаем результат извлечения
         mock_page.evaluate.return_value = [
             {
@@ -1472,7 +1472,7 @@ class TestDOMExtractionFunctions:
         ]
 
         result = extract_vinyltap_from_dom(mock_page)
-        
+
         assert len(result) == 2
         assert result[0]["title"] == "Test Vinyl LP"
         assert result[1]["title"] == "Test Vinyl 7 Inch"
@@ -1482,7 +1482,7 @@ class TestDOMExtractionFunctions:
         from vinyl_monitor import extract_vinyltap_from_dom
 
         mock_page = MagicMock()
-        
+
         # Мокаем результат извлечения с разными типами товаров
         mock_page.evaluate.return_value = [
             {
@@ -1512,7 +1512,7 @@ class TestDOMExtractionFunctions:
         ]
 
         result = extract_vinyltap_from_dom(mock_page)
-        
+
         # Должны остаться только виниловые пластинки (фильтрация происходит в JavaScript)
         # В тесте мы мокаем результат evaluate, который уже отфильтрован
         assert len(result) == 4  # Все элементы возвращаются, так как фильтрация в JS
@@ -1522,7 +1522,7 @@ class TestDOMExtractionFunctions:
         from vinyl_monitor import extract_vinyltap_from_dom
 
         mock_page = MagicMock()
-        
+
         # Мокаем результат извлечения с грязными ценами
         mock_page.evaluate.return_value = [
             {
@@ -1534,7 +1534,7 @@ class TestDOMExtractionFunctions:
         ]
 
         result = extract_vinyltap_from_dom(mock_page)
-        
+
         assert len(result) == 1
         # Цена очищается в JavaScript, в тесте мы мокаем результат evaluate
         # Поэтому проверяем, что функция была вызвана
@@ -1553,8 +1553,8 @@ class TestAdvancedMainFunction:
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
-    def test_main_with_advanced_deduplication(self, mock_should_monitor, mock_scrape_korobka, 
-                                            mock_scrape_vinyltap, mock_scrape_avito, 
+    def test_main_with_advanced_deduplication(self, mock_should_monitor, mock_scrape_korobka,
+                                            mock_scrape_vinyltap, mock_scrape_avito,
                                             mock_update_avito, mock_load, mock_save, mock_send, mock_dedup):
         """Тест main с продвинутой дедупликацией"""
         from vinyl_monitor import main
@@ -1562,7 +1562,7 @@ class TestAdvancedMainFunction:
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load.return_value = set()
-        
+
         mock_scrape_korobka.return_value = [
             {"id": "test1", "title": "Test Item 1", "price": "1000 руб", "url": "http://test1.com"}
         ]
@@ -1572,7 +1572,7 @@ class TestAdvancedMainFunction:
         mock_scrape_avito.return_value = [
             {"id": "test3", "title": "Test Item 3", "price": "2000 руб", "url": "http://test3.com"}
         ]
-        
+
         # Мокаем дедупликацию
         mock_dedup.return_value = [
             {"id": "test1", "title": "Test Item 1", "price": "1000 руб", "url": "http://test1.com"},
@@ -1599,8 +1599,8 @@ class TestAdvancedMainFunction:
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
-    def test_main_with_message_chunking(self, mock_should_monitor, mock_scrape_korobka, 
-                                      mock_scrape_vinyltap, mock_scrape_avito, 
+    def test_main_with_message_chunking(self, mock_should_monitor, mock_scrape_korobka,
+                                      mock_scrape_vinyltap, mock_scrape_avito,
                                       mock_update_avito, mock_load, mock_save, mock_send, mock_chunk):
         """Тест main с разбивкой сообщений"""
         from vinyl_monitor import main
@@ -1608,13 +1608,13 @@ class TestAdvancedMainFunction:
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load.return_value = set()
-        
+
         mock_scrape_korobka.return_value = [
             {"id": "test1", "title": "Test Item 1", "price": "1000 руб", "url": "http://test1.com"}
         ]
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
-        
+
         # Мокаем разбивку сообщений
         mock_chunk.return_value = ["chunk1", "chunk2"]
 
@@ -1636,8 +1636,8 @@ class TestAdvancedMainFunction:
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
-    def test_main_with_mixed_sources(self, mock_should_monitor, mock_scrape_korobka, 
-                                   mock_scrape_vinyltap, mock_scrape_avito, 
+    def test_main_with_mixed_sources(self, mock_should_monitor, mock_scrape_korobka,
+                                   mock_scrape_vinyltap, mock_scrape_avito,
                                    mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main с элементами из разных источников"""
         from vinyl_monitor import main
@@ -1645,7 +1645,7 @@ class TestAdvancedMainFunction:
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load.return_value = set()
-        
+
         mock_scrape_korobka.return_value = [
             {"id": "test1", "title": "Korobka Item", "price": "1000 руб", "url": "http://test1.com"}
         ]
@@ -1677,11 +1677,11 @@ class TestEdgeCasesAndErrorHandling:
         from vinyl_monitor import validate_url
 
         # Тестируем различные граничные случаи
-        assert validate_url("https://example.com") == True
-        assert validate_url("http://example.com") == True
-        assert validate_url("ftp://example.com") == False
-        assert validate_url("") == False
-        assert validate_url("not-a-url") == False
+        assert validate_url("https://example.com") is True
+        assert validate_url("http://example.com") is True
+        assert validate_url("ftp://example.com") is False
+        assert validate_url("") is False
+        assert validate_url("not-a-url") is False
         # validate_url может принимать "https://" как валидный URL
         # assert validate_url("https://") == False
 
@@ -1750,9 +1750,8 @@ class TestEdgeCasesAndErrorHandling:
         long_message = "A" * 10000
         with patch('vinyl_monitor.requests.post') as mock_post:
             mock_post.return_value.json.return_value = {"ok": True}
-            result = send_telegram(long_message)
+            send_telegram(long_message)
             # send_telegram может возвращать None при очень длинном сообщении
-            # assert result == True
 
     def test_load_state_edge_cases(self):
         """Тест загрузки состояния для граничных случаев"""
@@ -1863,7 +1862,7 @@ class TestMessageFormatValidation:
 🏠 Авито:
 - <a href="https://avito.ru/item1">Harry Potter LP</a> — 2000 руб (поиск: harry potter lp)"""
 
-        assert validate_message_format(valid_message) == True
+        assert validate_message_format(valid_message) is True
 
     def test_validate_message_format_invalid_no_link(self):
         """Тест валидации сообщения без ссылки"""
@@ -1873,7 +1872,7 @@ class TestMessageFormatValidation:
         invalid_message = """🎵 vinyltap.co.uk:
 - Wilco - Schmilco - Lp — €46,95"""
 
-        assert validate_message_format(invalid_message) == False
+        assert validate_message_format(invalid_message) is False
 
     def test_validate_message_format_invalid_no_price(self):
         """Тест валидации сообщения без цены"""
@@ -1883,7 +1882,7 @@ class TestMessageFormatValidation:
         invalid_message = """🎵 vinyltap.co.uk:
 - <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a>"""
 
-        assert validate_message_format(invalid_message) == False
+        assert validate_message_format(invalid_message) is False
 
     def test_validate_message_format_invalid_empty_title(self):
         """Тест валидации сообщения с пустым названием"""
@@ -1893,7 +1892,7 @@ class TestMessageFormatValidation:
         invalid_message = """🎵 vinyltap.co.uk:
 - <a href="https://vinyltap.co.uk/item1"></a> — €46,95"""
 
-        assert validate_message_format(invalid_message) == False
+        assert validate_message_format(invalid_message) is False
 
     def test_validate_message_format_invalid_no_title(self):
         """Тест валидации сообщения без названия"""
@@ -1903,16 +1902,16 @@ class TestMessageFormatValidation:
         invalid_message = """🎵 vinyltap.co.uk:
 - <a href="https://vinyltap.co.uk/item1">(без названия)</a> — €46,95"""
 
-        assert validate_message_format(invalid_message) == False
+        assert validate_message_format(invalid_message) is False
 
     def test_validate_message_format_empty_message(self):
         """Тест валидации пустого сообщения"""
         from vinyl_monitor import validate_message_format
 
         # Пустое сообщение
-        assert validate_message_format("") == False
-        assert validate_message_format("   ") == False
-        assert validate_message_format(None) == False
+        assert validate_message_format("") is False
+        assert validate_message_format("   ") is False
+        assert validate_message_format(None) is False
 
     def test_validate_message_format_only_headers(self):
         """Тест валидации сообщения только с заголовками"""
@@ -1922,7 +1921,7 @@ class TestMessageFormatValidation:
         message = """🎵 vinyltap.co.uk:
 🏠 Авито:"""
 
-        assert validate_message_format(message) == True  # Пустые заголовки допустимы
+        assert validate_message_format(message) is True  # Пустые заголовки допустимы
 
     def test_validate_message_format_mixed_valid_invalid(self):
         """Тест валидации сообщения со смешанными корректными и некорректными строками"""
@@ -1949,7 +1948,7 @@ class TestMessageFormatValidation:
 - <a href="https://avito.ru/item1">Harry Potter LP</a> — 2000 руб (поиск: harry potter lp)
 - <a href="https://avito.ru/item2">Beatles Vinyl</a> — 3500 руб (поиск: beatles vinyl)"""
 
-        assert validate_message_format(real_message) == True
+        assert validate_message_format(real_message) is True
 
     def test_validate_message_format_with_query_info(self):
         """Тест валидации сообщения с информацией о поиске"""
@@ -1960,7 +1959,7 @@ class TestMessageFormatValidation:
 - <a href="https://avito.ru/item1">Poets of the Fall LP</a> — 2500 руб (поиск: poets of the fall lp)
 - <a href="https://avito.ru/item2">Снежная королева LP</a> — 1800 руб (поиск: Снежная королева lp)"""
 
-        assert validate_message_format(message_with_query) == True
+        assert validate_message_format(message_with_query) is True
 
 
 class TestMainFunctionAdvanced:
@@ -1974,8 +1973,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
-    def test_main_all_sites_monitored(self, mock_should_monitor, mock_scrape_korobka, 
-                                     mock_scrape_vinyltap, mock_scrape_avito, 
+    def test_main_all_sites_monitored(self, mock_should_monitor, mock_scrape_korobka,
+                                     mock_scrape_vinyltap, mock_scrape_avito,
                                      mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main когда все сайты мониторятся"""
         from vinyl_monitor import main
@@ -1983,7 +1982,7 @@ class TestMainFunctionAdvanced:
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load.return_value = set()
-        
+
         mock_scrape_korobka.return_value = [
             {"id": "test1", "title": "Test Item 1", "price": "1000 руб", "url": "http://test1.com"}
         ]
@@ -2014,8 +2013,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
-    def test_main_no_sites_monitored(self, mock_should_monitor, mock_scrape_korobka, 
-                                   mock_scrape_vinyltap, mock_scrape_avito, 
+    def test_main_no_sites_monitored(self, mock_should_monitor, mock_scrape_korobka,
+                                   mock_scrape_vinyltap, mock_scrape_avito,
                                    mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main когда ни один сайт не мониторится"""
         from vinyl_monitor import main
@@ -2046,8 +2045,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
-    def test_main_with_duplicates(self, mock_should_monitor, mock_scrape_korobka, 
-                                mock_scrape_vinyltap, mock_scrape_avito, 
+    def test_main_with_duplicates(self, mock_should_monitor, mock_scrape_korobka,
+                                mock_scrape_vinyltap, mock_scrape_avito,
                                 mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main с дубликатами"""
         from vinyl_monitor import main
@@ -2055,7 +2054,7 @@ class TestMainFunctionAdvanced:
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load.return_value = {"test1"}  # Один элемент уже известен
-        
+
         mock_scrape_korobka.return_value = [
             {"id": "test1", "title": "Test Item 1", "price": "1000 руб", "url": "http://test1.com"},
             {"id": "test2", "title": "Test Item 2", "price": "2000 руб", "url": "http://test2.com"}
@@ -2081,8 +2080,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
-    def test_main_avito_only(self, mock_should_monitor, mock_scrape_korobka, 
-                           mock_scrape_vinyltap, mock_scrape_avito, 
+    def test_main_avito_only(self, mock_should_monitor, mock_scrape_korobka,
+                           mock_scrape_vinyltap, mock_scrape_avito,
                            mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main только с Авито"""
         from vinyl_monitor import main
@@ -2090,10 +2089,10 @@ class TestMainFunctionAdvanced:
         # Настраиваем моки - только Авито мониторится
         def should_monitor_side_effect(site, interval):
             return site == "avito"
-        
+
         mock_should_monitor.side_effect = should_monitor_side_effect
         mock_load.return_value = set()
-        
+
         mock_scrape_avito.return_value = [
             {"id": "test3", "title": "Test Item 3", "price": "2000 руб", "url": "http://test3.com"}
         ]
