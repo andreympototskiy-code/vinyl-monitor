@@ -5,3 +5,8 @@ beautifulsoup4
 pytest
 pytest-cov
 flake8
+bandit
+safety
+vulture
+dead
+isort

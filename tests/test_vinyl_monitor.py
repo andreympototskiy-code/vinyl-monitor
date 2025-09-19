@@ -1,26 +1,22 @@
 """
 Тесты для vinyl_monitor.py
 """
-import pytest
 import json
+import os
+import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock, mock_open
-import sys
-import os
+from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
 
 # Добавляем путь к модулю
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # Импорты после настройки пути
-from vinyl_monitor import (  # noqa: E402
-    load_state,
-    save_state,
-    load_avito_config,
-    should_monitor_site,
-    advanced_deduplication,
-    dedupe_keep_order
-)
+from vinyl_monitor import advanced_deduplication  # noqa: E402
+from vinyl_monitor import (dedupe_keep_order, load_avito_config, load_state,
+                           save_state, should_monitor_site)
 
 
 class TestStateManagement:
@@ -249,6 +245,7 @@ class TestTelegramIntegration:
             mock_post.side_effect = Exception("Network error")
 
             from vinyl_monitor import send_telegram
+
             # Функция должна не падать при ошибке
             send_telegram("Test message")
 
@@ -2653,6 +2650,7 @@ class TestTelegramErrorHandling:
     def test_send_telegram_connection_error(self, mock_post):
         """Тест отправки в Telegram с ошибкой соединения"""
         import requests
+
         from vinyl_monitor import send_telegram
 
         # Мокаем ошибку соединения
@@ -2668,6 +2666,7 @@ class TestTelegramErrorHandling:
     def test_send_telegram_timeout_error(self, mock_post):
         """Тест отправки в Telegram с ошибкой таймаута"""
         import requests
+
         from vinyl_monitor import send_telegram
 
         # Мокаем ошибку таймаута

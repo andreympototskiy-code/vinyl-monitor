@@ -1,12 +1,12 @@
 import json
 import os
 import time
-from pathlib import Path
-from typing import List, Dict, Set
-
-from dotenv import load_dotenv
-import requests
 from html import escape
+from pathlib import Path
+from typing import Dict, List, Set
+
+import requests
+from dotenv import load_dotenv
 
 load_dotenv()
 
