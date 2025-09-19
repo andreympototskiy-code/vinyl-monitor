@@ -1848,6 +1848,121 @@ class TestEdgeCasesAndErrorHandling:
                 assert "enabled" in result
 
 
+class TestMessageFormatValidation:
+    """Тесты для проверки формата сообщений"""
+
+    def test_validate_message_format_valid(self):
+        """Тест валидации корректного формата сообщения"""
+        from vinyl_monitor import validate_message_format
+
+        # Корректное сообщение
+        valid_message = """🎵 vinyltap.co.uk:
+- <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a> — €46,95
+- <a href="https://vinyltap.co.uk/item2">Test Album - Vinyl</a> — €25,00
+
+🏠 Авито:
+- <a href="https://avito.ru/item1">Harry Potter LP</a> — 2000 руб (поиск: harry potter lp)"""
+
+        assert validate_message_format(valid_message) == True
+
+    def test_validate_message_format_invalid_no_link(self):
+        """Тест валидации сообщения без ссылки"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение без ссылки
+        invalid_message = """🎵 vinyltap.co.uk:
+- Wilco - Schmilco - Lp — €46,95"""
+
+        assert validate_message_format(invalid_message) == False
+
+    def test_validate_message_format_invalid_no_price(self):
+        """Тест валидации сообщения без цены"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение без цены
+        invalid_message = """🎵 vinyltap.co.uk:
+- <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a>"""
+
+        assert validate_message_format(invalid_message) == False
+
+    def test_validate_message_format_invalid_empty_title(self):
+        """Тест валидации сообщения с пустым названием"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение с пустым названием
+        invalid_message = """🎵 vinyltap.co.uk:
+- <a href="https://vinyltap.co.uk/item1"></a> — €46,95"""
+
+        assert validate_message_format(invalid_message) == False
+
+    def test_validate_message_format_invalid_no_title(self):
+        """Тест валидации сообщения без названия"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение без названия
+        invalid_message = """🎵 vinyltap.co.uk:
+- <a href="https://vinyltap.co.uk/item1">(без названия)</a> — €46,95"""
+
+        assert validate_message_format(invalid_message) == False
+
+    def test_validate_message_format_empty_message(self):
+        """Тест валидации пустого сообщения"""
+        from vinyl_monitor import validate_message_format
+
+        # Пустое сообщение
+        assert validate_message_format("") == False
+        assert validate_message_format("   ") == False
+        assert validate_message_format(None) == False
+
+    def test_validate_message_format_only_headers(self):
+        """Тест валидации сообщения только с заголовками"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение только с заголовками
+        message = """🎵 vinyltap.co.uk:
+🏠 Авито:"""
+
+        assert validate_message_format(message) == True  # Пустые заголовки допустимы
+
+    def test_validate_message_format_mixed_valid_invalid(self):
+        """Тест валидации сообщения со смешанными корректными и некорректными строками"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение со смешанными строками
+        mixed_message = """🎵 vinyltap.co.uk:
+- <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a> — €46,95
+- Invalid line without link — €25,00
+- <a href="https://vinyltap.co.uk/item2">Test Album</a> — €30,00"""
+
+        assert validate_message_format(mixed_message) == False
+
+    def test_validate_message_format_real_example(self):
+        """Тест валидации реального примера сообщения"""
+        from vinyl_monitor import validate_message_format
+
+        # Реальный пример сообщения
+        real_message = """🎵 vinyltap.co.uk:
+- <a href="https://vinyltap.co.uk/products/david-holmes-black-bag">David Holmes - Black Bag (Original Motion Picture Soundtrack) - Lp</a> — €50,95
+- <a href="https://vinyltap.co.uk/products/stereolab-fed-up">Stereolab - Fed Up With Your Job? / Constant And Uniform Movement Unknown - 7 Inch</a> — €18,95
+
+🏠 Авито:
+- <a href="https://avito.ru/item1">Harry Potter LP</a> — 2000 руб (поиск: harry potter lp)
+- <a href="https://avito.ru/item2">Beatles Vinyl</a> — 3500 руб (поиск: beatles vinyl)"""
+
+        assert validate_message_format(real_message) == True
+
+    def test_validate_message_format_with_query_info(self):
+        """Тест валидации сообщения с информацией о поиске"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение с информацией о поиске
+        message_with_query = """🏠 Авито:
+- <a href="https://avito.ru/item1">Poets of the Fall LP</a> — 2500 руб (поиск: poets of the fall lp)
+- <a href="https://avito.ru/item2">Снежная королева LP</a> — 1800 руб (поиск: Снежная королева lp)"""
+
+        assert validate_message_format(message_with_query) == True
+
+
 class TestMainFunctionAdvanced:
     """Дополнительные тесты для функции main"""
 

@@ -419,6 +419,52 @@ def safe_scrape(func, url: str) -> List[Dict]:
         return []
 
 
+def validate_message_format(message: str) -> bool:
+    """
+    Проверяет формат сообщения на соответствие ожидаемому формату:
+    • Название - Цена - Ссылка
+    """
+    if not message or not message.strip():
+        return False
+    
+    lines = message.strip().split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Пропускаем заголовки разделов
+        if line.startswith('🎵') or line.startswith('🏠') or line.startswith('📦'):
+            continue
+            
+        # Проверяем формат строки с товаром
+        if line.startswith('- '):
+            # Убираем "- " в начале
+            content = line[2:].strip()
+            
+            # Проверяем наличие ссылки
+            if '<a href=' not in content or '</a>' not in content:
+                return False
+                
+            # Проверяем, что есть название и цена
+            # Формат: <a href="url">название</a> — цена
+            if ' — ' not in content:
+                return False
+                
+            # Проверяем, что название не пустое
+            title_start = content.find('>') + 1
+            title_end = content.find('</a>')
+            if title_start <= 1 or title_end <= title_start:
+                return False
+                
+            title = content[title_start:title_end].strip()
+            if not title or title == '(без названия)':
+                return False
+    
+    return True
+
+
 def chunk_messages(text: str, limit: int = 4096) -> List[str]:
     if len(text) <= limit:
         return [text]
