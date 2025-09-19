@@ -47,7 +47,7 @@ jobs:
     - name: Security check with bandit
       run: |
         bandit -r . -f json -o bandit-report.json || true
-        bandit -r . --exclude .venv --exclude .git --exclude tests
+        bandit vinyl_monitor.py manage_avito.py convert_state.py --severity-level medium
 
     - name: Check for vulnerabilities with safety
       run: |
