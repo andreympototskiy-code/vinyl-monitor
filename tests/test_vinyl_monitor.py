@@ -2317,11 +2317,11 @@ class TestExceptionHandling:
     def test_load_state_corrupted_json(self, mock_state_path):
         """Тест загрузки состояния с поврежденным JSON"""
         from vinyl_monitor import load_state
-        
+
         # Мокаем файл с поврежденным JSON
         mock_state_path.exists.return_value = True
         mock_state_path.read_text.return_value = '{"known_ids": [invalid json'
-        
+
         result = load_state()
         assert result == set()
 
@@ -2329,11 +2329,11 @@ class TestExceptionHandling:
     def test_load_state_io_error(self, mock_state_path):
         """Тест загрузки состояния с ошибкой ввода-вывода"""
         from vinyl_monitor import load_state
-        
+
         # Мокаем файл с ошибкой ввода-вывода
         mock_state_path.exists.return_value = True
         mock_state_path.read_text.side_effect = IOError("Permission denied")
-        
+
         result = load_state()
         assert result == set()
 
@@ -2341,11 +2341,11 @@ class TestExceptionHandling:
     def test_get_item_info_corrupted_json(self, mock_state_path):
         """Тест получения информации о позиции с поврежденным JSON"""
         from vinyl_monitor import get_item_info
-        
+
         # Мокаем файл с поврежденным JSON
         mock_state_path.exists.return_value = True
         mock_state_path.read_text.return_value = '{"known_items": {invalid json'
-        
+
         result = get_item_info("test_id")
         assert result == {}
 
@@ -2353,11 +2353,11 @@ class TestExceptionHandling:
     def test_get_item_info_io_error(self, mock_state_path):
         """Тест получения информации о позиции с ошибкой ввода-вывода"""
         from vinyl_monitor import get_item_info
-        
+
         # Мокаем файл с ошибкой ввода-вывода
         mock_state_path.exists.return_value = True
         mock_state_path.read_text.side_effect = IOError("Permission denied")
-        
+
         result = get_item_info("test_id")
         assert result == {}
 
@@ -2365,10 +2365,10 @@ class TestExceptionHandling:
     def test_save_state_directory_creation_error(self, mock_state_path):
         """Тест сохранения состояния с ошибкой создания директории"""
         from vinyl_monitor import save_state
-        
+
         # Мокаем ошибку создания директории
         mock_state_path.parent.mkdir.side_effect = OSError("Permission denied")
-        
+
         # Должно поднять исключение
         with pytest.raises(OSError):
             save_state(set(["test_id"]))
@@ -2377,11 +2377,11 @@ class TestExceptionHandling:
     def test_save_state_write_error(self, mock_state_path):
         """Тест сохранения состояния с ошибкой записи"""
         from vinyl_monitor import save_state
-        
+
         # Мокаем ошибку записи
         mock_state_path.parent.mkdir.return_value = None
         mock_state_path.write_text.side_effect = IOError("Disk full")
-        
+
         # Должно поднять исключение
         with pytest.raises(IOError):
             save_state(set(["test_id"]))
@@ -2391,17 +2391,17 @@ class TestExceptionHandling:
     def test_save_state_with_existing_known_items(self, mock_state_path, mock_file):
         """Тест сохранения состояния с существующими known_items"""
         from vinyl_monitor import save_state
-        
+
         # Мокаем существующий файл с known_items
         mock_state_path.parent.mkdir.return_value = None
         mock_state_path.exists.return_value = True
-        
+
         # Настраиваем mock_open для чтения и записи
         mock_file.return_value.__enter__.return_value.read.return_value = '{"known_items": {"existing_id": {"added_at": "2023-01-01", "title": "Existing", "source": "test"}}}'
-        
+
         new_items = [{"id": "new_id", "title": "New Item", "price": "100", "source": "test"}]
         save_state(set(["existing_id", "new_id"]), new_items)
-        
+
         # Проверяем, что open был вызван для записи
         assert mock_file.call_count >= 1
 
@@ -2410,17 +2410,17 @@ class TestExceptionHandling:
     def test_save_state_with_existing_known_ids(self, mock_state_path, mock_file):
         """Тест сохранения состояния с существующими known_ids (старый формат)"""
         from vinyl_monitor import save_state
-        
+
         # Мокаем существующий файл с known_ids (старый формат)
         mock_state_path.parent.mkdir.return_value = None
         mock_state_path.exists.return_value = True
-        
+
         # Настраиваем mock_open для чтения и записи
         mock_file.return_value.__enter__.return_value.read.return_value = '{"known_ids": ["old_id1", "old_id2"]}'
-        
+
         new_items = [{"id": "new_id", "title": "New Item", "price": "100", "source": "test"}]
         save_state(set(["old_id1", "old_id2", "new_id"]), new_items)
-        
+
         # Проверяем, что open был вызван для записи
         assert mock_file.call_count >= 1
 
@@ -2429,17 +2429,17 @@ class TestExceptionHandling:
     def test_save_state_with_corrupted_existing_file(self, mock_state_path, mock_file):
         """Тест сохранения состояния с поврежденным существующим файлом"""
         from vinyl_monitor import save_state
-        
+
         # Мокаем поврежденный файл
         mock_state_path.parent.mkdir.return_value = None
         mock_state_path.exists.return_value = True
-        
+
         # Настраиваем mock_open для чтения и записи
         mock_file.return_value.__enter__.return_value.read.return_value = '{"corrupted": json}'
-        
+
         new_items = [{"id": "new_id", "title": "New Item", "price": "100", "source": "test"}]
         save_state(set(["new_id"]), new_items)
-        
+
         # Проверяем, что open был вызван для записи (должен обработать ошибку)
         assert mock_file.call_count >= 1
 
@@ -2448,13 +2448,13 @@ class TestExceptionHandling:
     def test_save_state_with_empty_new_items(self, mock_state_path, mock_file):
         """Тест сохранения состояния с пустыми новыми элементами"""
         from vinyl_monitor import save_state
-        
+
         # Мокаем файл
         mock_state_path.parent.mkdir.return_value = None
         mock_state_path.exists.return_value = False
-        
+
         save_state(set(["existing_id"]), [])
-        
+
         # Проверяем, что open был вызван для записи
         assert mock_file.call_count >= 1
 
@@ -2463,13 +2463,13 @@ class TestExceptionHandling:
     def test_save_state_with_none_new_items(self, mock_state_path, mock_file):
         """Тест сохранения состояния с None новыми элементами"""
         from vinyl_monitor import save_state
-        
+
         # Мокаем файл
         mock_state_path.parent.mkdir.return_value = None
         mock_state_path.exists.return_value = False
-        
+
         save_state(set(["existing_id"]), None)
-        
+
         # Проверяем, что open был вызван для записи
         assert mock_file.call_count >= 1
 
@@ -2481,10 +2481,10 @@ class TestScrapingErrorHandling:
     def test_scrape_with_playwright_browser_error(self, mock_playwright):
         """Тест скрапинга с ошибкой браузера"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем ошибку запуска браузера
         mock_playwright.return_value.__enter__.return_value.chromium.launch.side_effect = Exception("Browser failed")
-        
+
         # Функция должна поднять исключение, так как нет обработки ошибок
         with pytest.raises(Exception, match="Browser failed"):
             scrape_with_playwright()
@@ -2493,10 +2493,10 @@ class TestScrapingErrorHandling:
     def test_scrape_vinyltap_with_playwright_browser_error(self, mock_playwright):
         """Тест скрапинга vinyltap с ошибкой браузера"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем ошибку запуска браузера
         mock_playwright.return_value.__enter__.return_value.chromium.launch.side_effect = Exception("Browser failed")
-        
+
         # Функция должна поднять исключение, так как нет обработки ошибок
         with pytest.raises(Exception, match="Browser failed"):
             scrape_vinyltap_with_playwright()
@@ -2505,10 +2505,10 @@ class TestScrapingErrorHandling:
     def test_scrape_avito_with_playwright_browser_error(self, mock_playwright):
         """Тест скрапинга Avito с ошибкой браузера"""
         from vinyl_monitor import scrape_avito_with_playwright
-        
+
         # Мокаем ошибку запуска браузера
         mock_playwright.return_value.__enter__.return_value.chromium.launch.side_effect = Exception("Browser failed")
-        
+
         result = scrape_avito_with_playwright()
         assert result == []
 
@@ -2516,7 +2516,7 @@ class TestScrapingErrorHandling:
     def test_scrape_with_playwright_page_error(self, mock_playwright):
         """Тест скрапинга с ошибкой страницы"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -2524,10 +2524,10 @@ class TestScrapingErrorHandling:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем ошибку загрузки страницы
         mock_page.goto.side_effect = Exception("Page load failed")
-        
+
         result = scrape_with_playwright()
         assert result == []
 
@@ -2535,7 +2535,7 @@ class TestScrapingErrorHandling:
     def test_scrape_vinyltap_with_playwright_page_error(self, mock_playwright):
         """Тест скрапинга vinyltap с ошибкой страницы"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -2543,10 +2543,10 @@ class TestScrapingErrorHandling:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем ошибку загрузки страницы
         mock_page.goto.side_effect = Exception("Page load failed")
-        
+
         result = scrape_vinyltap_with_playwright()
         assert result == []
 
@@ -2561,19 +2561,19 @@ class TestMainFunctionErrorHandling:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_with_scraping_errors(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                     mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_with_scraping_errors(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                     mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                      mock_should_monitor):
         """Тест main функции с ошибками скрапинга"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
         mock_scrape_korobka.side_effect = Exception("Korobka failed")
         mock_scrape_vinyltap.side_effect = Exception("Vinyltap failed")
         mock_scrape_avito.side_effect = Exception("Avito failed")
-        
+
         # main должна поднять исключение, так как нет обработки ошибок
         with pytest.raises(Exception, match="Korobka failed"):
             main()
@@ -2585,12 +2585,12 @@ class TestMainFunctionErrorHandling:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_with_telegram_error(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                    mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_with_telegram_error(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                    mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                     mock_should_monitor):
         """Тест main функции с ошибкой Telegram"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
@@ -2598,7 +2598,7 @@ class TestMainFunctionErrorHandling:
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
         mock_send_telegram.side_effect = Exception("Telegram failed")
-        
+
         # main должна поднять исключение, так как нет обработки ошибок
         with pytest.raises(Exception, match="Telegram failed"):
             main()
@@ -2610,12 +2610,12 @@ class TestMainFunctionErrorHandling:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_with_save_state_error(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                      mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_with_save_state_error(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                      mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                       mock_should_monitor):
         """Тест main функции с ошибкой сохранения состояния"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
@@ -2623,7 +2623,7 @@ class TestMainFunctionErrorHandling:
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
         mock_save_state.side_effect = Exception("Save failed")
-        
+
         # main должна поднять исключение, так как нет обработки ошибок
         with pytest.raises(Exception, match="Save failed"):
             main()
@@ -2639,10 +2639,10 @@ class TestTelegramErrorHandling:
         """Тест отправки в Telegram с ошибкой соединения"""
         import requests
         from vinyl_monitor import send_telegram
-        
+
         # Мокаем ошибку соединения
         mock_post.side_effect = requests.exceptions.ConnectionError("Connection failed")
-        
+
         # Функция должна обработать ошибку и не поднять исключение
         result = send_telegram("Test message")
         assert result is None  # Функция возвращает None
@@ -2654,10 +2654,10 @@ class TestTelegramErrorHandling:
         """Тест отправки в Telegram с ошибкой таймаута"""
         import requests
         from vinyl_monitor import send_telegram
-        
+
         # Мокаем ошибку таймаута
         mock_post.side_effect = requests.exceptions.Timeout("Timeout")
-        
+
         # Функция должна обработать ошибку и не поднять исключение
         result = send_telegram("Test message")
         assert result is None  # Функция возвращает None
@@ -2668,12 +2668,12 @@ class TestTelegramErrorHandling:
     def test_send_telegram_http_error(self, mock_post):
         """Тест отправки в Telegram с HTTP ошибкой"""
         from vinyl_monitor import send_telegram
-        
+
         # Мокаем HTTP ошибку
         mock_response = MagicMock()
         mock_response.json.return_value = {"ok": False, "description": "Bad Request"}
         mock_post.return_value = mock_response
-        
+
         # Функция должна обработать ошибку и не поднять исключение
         result = send_telegram("Test message")
         assert result is None  # Функция возвращает None
@@ -2684,12 +2684,12 @@ class TestTelegramErrorHandling:
     def test_send_telegram_json_error(self, mock_post):
         """Тест отправки в Telegram с ошибкой JSON"""
         from vinyl_monitor import send_telegram
-        
+
         # Мокаем ошибку JSON
         mock_response = MagicMock()
         mock_response.json.side_effect = ValueError("Invalid JSON")
         mock_post.return_value = mock_response
-        
+
         # Функция должна обработать ошибку и не поднять исключение
         result = send_telegram("Test message")
         assert result is None  # Функция возвращает None
@@ -2703,10 +2703,10 @@ class TestAvitoErrorHandling:
     def test_scrape_avito_config_error(self, mock_playwright, mock_load_config):
         """Тест скрапинга Avito с ошибкой конфигурации"""
         from vinyl_monitor import scrape_avito_with_playwright
-        
+
         # Мокаем ошибку загрузки конфигурации
         mock_load_config.side_effect = Exception("Config error")
-        
+
         # Функция должна поднять исключение, так как нет обработки ошибок
         with pytest.raises(Exception, match="Config error"):
             scrape_avito_with_playwright()
@@ -2716,7 +2716,7 @@ class TestAvitoErrorHandling:
     def test_scrape_avito_empty_queries(self, mock_playwright, mock_load_config):
         """Тест скрапинга Avito с пустыми запросами"""
         from vinyl_monitor import scrape_avito_with_playwright
-        
+
         # Мокаем конфигурацию с пустыми запросами
         mock_load_config.return_value = {
             "search_queries": [],
@@ -2724,7 +2724,7 @@ class TestAvitoErrorHandling:
             "category": "kollektsionirovanie",
             "enabled": True
         }
-        
+
         result = scrape_avito_with_playwright()
         assert result == []
 
@@ -2733,7 +2733,7 @@ class TestAvitoErrorHandling:
     def test_scrape_avito_disabled(self, mock_playwright, mock_load_config):
         """Тест скрапинга Avito с отключенным мониторингом"""
         from vinyl_monitor import scrape_avito_with_playwright
-        
+
         # Мокаем отключенную конфигурацию
         mock_load_config.return_value = {
             "search_queries": ["test query"],
@@ -2741,7 +2741,7 @@ class TestAvitoErrorHandling:
             "category": "kollektsionirovanie",
             "enabled": False
         }
-        
+
         result = scrape_avito_with_playwright()
         assert result == []
 
@@ -2753,11 +2753,11 @@ class TestCompleteCoverage:
     def test_load_state_unknown_format(self, mock_state_path):
         """Тест загрузки состояния с неизвестным форматом (строка 46)"""
         from vinyl_monitor import load_state
-        
+
         # Мокаем файл с неизвестным форматом
         mock_state_path.exists.return_value = True
         mock_state_path.read_text.return_value = '{"unknown_format": "data"}'
-        
+
         result = load_state()
         assert result == set()
 
@@ -2766,23 +2766,23 @@ class TestCompleteCoverage:
     def test_load_state_else_branch_direct(self, mock_state_path, mock_file):
         """Тест прямой ветки else в load_state (строка 46)"""
         from vinyl_monitor import load_state
-        
+
         # Мокаем файл с данными, которые не содержат known_ids или known_items
         mock_state_path.exists.return_value = True
         mock_file.return_value.__enter__.return_value.read.return_value = '{"other_data": "value"}'
-        
+
         result = load_state()
         assert result == set()
 
     def test_advanced_deduplication_url_duplicate(self):
         """Тест продвинутой дедупликации с дубликатом по URL (строки 339-340)"""
         from vinyl_monitor import advanced_deduplication
-        
+
         items = [
             {"id": "test1", "title": "Test Album", "price": "100", "url": "https://example.com/item1"},
             {"id": "test2", "title": "Test Album", "price": "100", "url": "https://example.com/item1"}  # Дубликат URL
         ]
-        
+
         result = advanced_deduplication(items)
         # Должен остаться только один элемент
         assert len(result) == 1
@@ -2790,12 +2790,12 @@ class TestCompleteCoverage:
     def test_advanced_deduplication_content_duplicate(self):
         """Тест продвинутой дедупликации с дубликатом по содержимому"""
         from vinyl_monitor import advanced_deduplication
-        
+
         items = [
             {"id": "test1", "title": "Test Album", "price": "100", "url": "https://example.com/item1"},
             {"id": "test2", "title": "Test Album", "price": "100", "url": "https://example.com/item2"}  # Дубликат содержимого
         ]
-        
+
         result = advanced_deduplication(items)
         # Должен остаться только один элемент
         assert len(result) == 1
@@ -2804,7 +2804,7 @@ class TestCompleteCoverage:
     def test_scrape_with_playwright_retry_logic(self, mock_playwright):
         """Тест логики повторных попыток в scrape_with_playwright (строки 628, 634-635)"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -2812,11 +2812,11 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем ошибки загрузки страницы с последующим успехом
         mock_page.goto.side_effect = [Exception("First attempt failed"), Exception("Second attempt failed"), None]
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_with_playwright()
         # Должен обработать ошибки и вернуть пустой список
         assert result == []
@@ -2825,7 +2825,7 @@ class TestCompleteCoverage:
     def test_scrape_vinyltap_with_playwright_retry_logic(self, mock_playwright):
         """Тест логики повторных попыток в scrape_vinyltap_with_playwright (строки 641-643)"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -2833,11 +2833,11 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем ошибки загрузки страницы с последующим успехом
         mock_page.goto.side_effect = [Exception("First attempt failed"), Exception("Second attempt failed"), None]
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_vinyltap_with_playwright()
         # Должен обработать ошибки и вернуть пустой список
         assert result == []
@@ -2849,20 +2849,20 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_korobka_skip_interval(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                      mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_korobka_skip_interval(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                      mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                       mock_should_monitor):
         """Тест main функции с пропуском korobka по интервалу (строки 698, 702-703)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.side_effect = lambda site, interval: site != "korobkavinyla"
         mock_load_state.return_value = set()
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
-        
+
         main()
-        
+
         # Проверяем, что korobka не был вызван
         mock_scrape_korobka.assert_not_called()
 
@@ -2873,20 +2873,20 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_vinyltap_skip_interval(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                       mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_vinyltap_skip_interval(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                       mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                        mock_should_monitor):
         """Тест main функции с пропуском vinyltap по интервалу"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.side_effect = lambda site, interval: site != "vinyltap"
         mock_load_state.return_value = set()
         mock_scrape_korobka.return_value = []
         mock_scrape_avito.return_value = []
-        
+
         main()
-        
+
         # Проверяем, что vinyltap не был вызван
         mock_scrape_vinyltap.assert_not_called()
 
@@ -2897,21 +2897,21 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_avito_skip_interval(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                    mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_avito_skip_interval(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                    mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                     mock_should_monitor):
         """Тест main функции с пропуском avito по интервалу"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки - avito возвращает пустой список (пропуск по интервалу)
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
         mock_scrape_korobka.return_value = []
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []  # Avito пропускает по интервалу
-        
+
         main()
-        
+
         # Проверяем, что avito был вызван, но вернул пустой список
         mock_scrape_avito.assert_called()
 
@@ -2922,21 +2922,21 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_no_new_items(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                             mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_no_new_items(self, mock_send_telegram, mock_save_state, mock_load_state,
+                             mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                              mock_should_monitor):
         """Тест main функции без новых элементов (строки 712-714)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set(["existing_id"])
         mock_scrape_korobka.return_value = [{"id": "existing_id", "title": "Existing", "price": "100"}]
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
-        
+
         main()
-        
+
         # Проверяем, что send_telegram не был вызван (нет новых элементов)
         mock_send_telegram.assert_not_called()
 
@@ -2947,12 +2947,12 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_avito_items_formatting(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                       mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_avito_items_formatting(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                       mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                        mock_should_monitor):
         """Тест форматирования элементов Avito в main функции (строки 776-782)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
@@ -2961,9 +2961,9 @@ class TestCompleteCoverage:
         mock_scrape_avito.return_value = [
             {"id": "avito1", "title": "Avito Item", "price": "200", "source": "avito", "query": "test query"}
         ]
-        
+
         main()
-        
+
         # Проверяем, что send_telegram был вызван
         mock_send_telegram.assert_called()
 
@@ -2974,21 +2974,21 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_avito_no_items(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                               mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_avito_no_items(self, mock_send_telegram, mock_save_state, mock_load_state,
+                               mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                mock_should_monitor):
         """Тест main функции с пустыми элементами Avito (строки 785-791)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
         mock_scrape_korobka.return_value = []
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
-        
+
         main()
-        
+
         # Проверяем, что send_telegram не был вызван для Avito
         # (так как нет элементов Avito)
 
@@ -2999,12 +2999,12 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_avito_items_with_query(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                       mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_avito_items_with_query(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                       mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                        mock_should_monitor):
         """Тест main функции с элементами Avito с запросом (строки 794-802)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
@@ -3013,9 +3013,9 @@ class TestCompleteCoverage:
         mock_scrape_avito.return_value = [
             {"id": "avito1", "title": "Avito Item", "price": "200", "source": "avito", "query": "test query"}
         ]
-        
+
         main()
-        
+
         # Проверяем, что send_telegram был вызван с правильным форматированием
         mock_send_telegram.assert_called()
 
@@ -3026,21 +3026,21 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_final_message(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                              mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_final_message(self, mock_send_telegram, mock_save_state, mock_load_state,
+                              mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                               mock_should_monitor):
         """Тест финального сообщения в main функции (строка 819)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
         mock_scrape_korobka.return_value = [{"id": "test1", "title": "Test", "price": "100"}]
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
-        
+
         main()
-        
+
         # Проверяем, что send_telegram был вызван
         mock_send_telegram.assert_called()
 
@@ -3048,7 +3048,7 @@ class TestCompleteCoverage:
     def test_scrape_with_playwright_load_more_no_button(self, mock_playwright):
         """Тест скрапинга с отсутствием кнопки Load more (строка 628)"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3056,14 +3056,14 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем отсутствие кнопки Load more
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
         mock_btn.count.return_value = 0  # Кнопка не найдена
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_with_playwright()
         assert result == []
 
@@ -3071,7 +3071,7 @@ class TestCompleteCoverage:
     def test_scrape_with_playwright_load_more_exception(self, mock_playwright):
         """Тест скрапинга с исключением при нажатии Load more (строки 634-635)"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3079,7 +3079,7 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more с исключением при клике
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
@@ -3087,7 +3087,7 @@ class TestCompleteCoverage:
         mock_btn.first.scroll_into_view_if_needed.side_effect = Exception("Scroll failed")
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_with_playwright()
         assert result == []
 
@@ -3095,7 +3095,7 @@ class TestCompleteCoverage:
     def test_scrape_vinyltap_with_playwright_load_more_no_button(self, mock_playwright):
         """Тест скрапинга vinyltap с отсутствием кнопки Load more (строки 641-643)"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3103,14 +3103,14 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем отсутствие кнопки Load more
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
         mock_btn.count.return_value = 0  # Кнопка не найдена
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_vinyltap_with_playwright()
         assert result == []
 
@@ -3118,7 +3118,7 @@ class TestCompleteCoverage:
     def test_scrape_vinyltap_with_playwright_load_more_exception(self, mock_playwright):
         """Тест скрапинга vinyltap с исключением при нажатии Load more"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3126,7 +3126,7 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more с исключением при клике
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
@@ -3134,7 +3134,7 @@ class TestCompleteCoverage:
         mock_btn.first.scroll_into_view_if_needed.side_effect = Exception("Scroll failed")
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_vinyltap_with_playwright()
         assert result == []
 
@@ -3142,7 +3142,7 @@ class TestCompleteCoverage:
     def test_scrape_vinyltap_with_playwright_load_more_break(self, mock_playwright):
         """Тест скрапинга vinyltap с break в Load more (строка 698)"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3150,14 +3150,14 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more с count = 0 (break)
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
         mock_btn.count.return_value = 0  # Кнопка не найдена - break
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_vinyltap_with_playwright()
         assert result == []
 
@@ -3165,7 +3165,7 @@ class TestCompleteCoverage:
     def test_scrape_vinyltap_with_playwright_load_more_exception_handling(self, mock_playwright):
         """Тест скрапинга vinyltap с обработкой исключения Load more (строки 702-703)"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3173,7 +3173,7 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more с исключением
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
@@ -3181,7 +3181,7 @@ class TestCompleteCoverage:
         mock_btn.first.scroll_into_view_if_needed.side_effect = Exception("Load more error")
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_vinyltap_with_playwright()
         assert result == []
 
@@ -3189,7 +3189,7 @@ class TestCompleteCoverage:
     def test_scrape_vinyltap_with_playwright_url_exception(self, mock_playwright):
         """Тест скрапинга vinyltap с исключением при сканировании URL (строки 712-714)"""
         from vinyl_monitor import scrape_vinyltap_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3197,10 +3197,10 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем исключение при goto
         mock_page.goto.side_effect = Exception("URL scan error")
-        
+
         result = scrape_vinyltap_with_playwright()
         assert result == []
 
@@ -3211,12 +3211,12 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_korobka_items_formatting(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                         mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
-                                         mock_should_monitor):
+    def test_main_korobka_items_formatting(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                          mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
+                                          mock_should_monitor):
         """Тест форматирования элементов korobka в main функции (строки 776-782)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
@@ -3225,9 +3225,9 @@ class TestCompleteCoverage:
         ]
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
-        
+
         main()
-        
+
         # Проверяем, что send_telegram был вызван с правильным форматированием
         mock_send_telegram.assert_called()
 
@@ -3238,12 +3238,12 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_vinyltap_items_formatting(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                          mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
-                                          mock_should_monitor):
+    def test_main_vinyltap_items_formatting(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                           mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
+                                           mock_should_monitor):
         """Тест форматирования элементов vinyltap в main функции (строки 785-791)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
@@ -3252,9 +3252,9 @@ class TestCompleteCoverage:
             {"id": "vinyltap1", "title": "Vinyltap Item", "price": "200", "url": "https://vinyltap.com/item1"}
         ]
         mock_scrape_avito.return_value = []
-        
+
         main()
-        
+
         # Проверяем, что send_telegram был вызван с правильным форматированием
         mock_send_telegram.assert_called()
 
@@ -3265,12 +3265,12 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
-    def test_main_avito_items_formatting_with_query(self, mock_send_telegram, mock_save_state, mock_load_state, 
-                                                  mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+    def test_main_avito_items_formatting_with_query(self, mock_send_telegram, mock_save_state, mock_load_state,
+                                                  mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
                                                   mock_should_monitor):
         """Тест форматирования элементов Avito с запросом в main функции (строки 794-802)"""
         from vinyl_monitor import main
-        
+
         # Настраиваем моки
         mock_should_monitor.return_value = True
         mock_load_state.return_value = set()
@@ -3279,9 +3279,9 @@ class TestCompleteCoverage:
         mock_scrape_avito.return_value = [
             {"id": "avito1", "title": "Avito Item", "price": "300", "url": "https://avito.com/item1", "query": "test query"}
         ]
-        
+
         main()
-        
+
         # Проверяем, что send_telegram был вызван с правильным форматированием
         mock_send_telegram.assert_called()
 
@@ -3298,7 +3298,7 @@ class TestCompleteCoverage:
     def test_scrape_with_playwright_load_more_break_direct(self, mock_playwright):
         """Тест скрапинга с break в Load more (строка 628)"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3306,14 +3306,14 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more с count = 0 (break)
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
         mock_btn.count.return_value = 0  # Кнопка не найдена - break
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_with_playwright()
         assert result == []
 
@@ -3321,7 +3321,7 @@ class TestCompleteCoverage:
     def test_scrape_with_playwright_load_more_exception_handling_direct(self, mock_playwright):
         """Тест скрапинга с обработкой исключения Load more (строки 634-635)"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3329,7 +3329,7 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем кнопку Load more с исключением
         mock_page.goto.return_value = None
         mock_btn = MagicMock()
@@ -3337,7 +3337,7 @@ class TestCompleteCoverage:
         mock_btn.first.scroll_into_view_if_needed.side_effect = Exception("Load more error")
         mock_page.locator.return_value = mock_btn
         mock_page.evaluate.return_value = []
-        
+
         result = scrape_with_playwright()
         assert result == []
 
@@ -3345,7 +3345,7 @@ class TestCompleteCoverage:
     def test_scrape_with_playwright_section_exception(self, mock_playwright):
         """Тест скрапинга с исключением при сканировании секции (строки 641-643)"""
         from vinyl_monitor import scrape_with_playwright
-        
+
         # Мокаем Playwright
         mock_browser = MagicMock()
         mock_context = MagicMock()
@@ -3353,10 +3353,10 @@ class TestCompleteCoverage:
         mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
         mock_browser.new_context.return_value = mock_context
         mock_context.new_page.return_value = mock_page
-        
+
         # Мокаем исключение при goto
         mock_page.goto.side_effect = Exception("Section scan error")
-        
+
         result = scrape_with_playwright()
         assert result == []
 
@@ -3369,11 +3369,11 @@ class TestManageAvitoCoverage:
     def test_load_config_file_exists(self, mock_config_path, mock_file):
         """Тест загрузки конфигурации когда файл существует (строки 15-16)"""
         import manage_avito
-        
+
         # Мокаем существующий файл
         mock_config_path.exists.return_value = True
         mock_file.return_value.__enter__.return_value.read.return_value = '{"search_queries": ["test"]}'
-        
+
         result = manage_avito.load_config()
         assert result == {"search_queries": ["test"]}
 
@@ -3383,24 +3383,24 @@ class TestManageAvitoCoverage:
     def test_add_query_already_exists(self, mock_save_config, mock_config_path, mock_file):
         """Тест добавления запроса который уже существует (строка 49)"""
         import manage_avito
-        
+
         # Мокаем конфигурацию с существующим запросом
         mock_config_path.exists.return_value = True
         mock_file.return_value.__enter__.return_value.read.return_value = '{"search_queries": ["existing query"]}'
-        
+
         # Мокаем save_config
         mock_save_config.return_value = None
-        
+
         # Добавляем существующий запрос
         manage_avito.add_query("existing query")
-        
+
         # Проверяем, что save_config не был вызван (запрос уже существует)
         mock_save_config.assert_not_called()
 
     def test_main_function_call(self):
         """Тест вызова main функции (строка 108)"""
         import manage_avito
-        
+
         # Мокаем main функцию
         with patch('manage_avito.main') as mock_main:
             # Вызываем main через __main__
@@ -3415,13 +3415,13 @@ class TestConvertStateCoverage:
     def test_convert_state_else_branch(self, mock_file):
         """Тест ветки else в convert_state (строка 47)"""
         import convert_state
-        
+
         # Мокаем файл с данными, которые не содержат known_ids или known_items
         mock_file.return_value.__enter__.return_value.read.return_value = '{"other_data": "value"}'
-        
+
         # Вызываем функцию конвертации
         convert_state.convert_state()
-        
+
         # Проверяем, что файл был прочитан
         mock_file.assert_called()
 
