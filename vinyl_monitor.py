@@ -470,7 +470,7 @@ def validate_message_format(message: str) -> bool:
                 for symbol in currency_symbols:
                     if price_part.count(symbol) > 1:
                         return False
-                
+
                 # Проверяем на дублирование EUR/GBP
                 if price_part.count('EUR') > 1 or price_part.count('GBP') > 1:
                     return False
@@ -578,7 +578,7 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
                   // Берем только первую цену (часть до первого символа валюты + символ + часть после)
                   price = priceParts[0] + foundCurrency + priceParts[1];
                 }
-                
+
                 // Дополнительная проверка на дублирование EUR
                 if (price.includes('EUR') && price.includes('€')) {
                   // Убираем дублирование EUR после €
@@ -811,14 +811,14 @@ def main():
             for it in tap_items:
                 title = it.get('title', '(без названия)')
                 price = it.get('price', '')
-                
+
                 # Исправляем валюту для vinyltap.co.uk (должна быть £, а не €)
                 if price and '€' in price:
                     # Заменяем € на £ для vinyltap.co.uk
                     price = price.replace('€', '£')
                     # Убираем EUR и заменяем на GBP
                     price = price.replace('EUR', 'GBP')
-                
+
                 price_str = f" — {price}" if price else ''
                 url = it['url']
                 safe_title = escape(title)
