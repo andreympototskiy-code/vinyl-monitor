@@ -1554,8 +1554,8 @@ class TestAdvancedMainFunction:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
     def test_main_with_advanced_deduplication(self, mock_should_monitor, mock_scrape_korobka,
-                                            mock_scrape_vinyltap, mock_scrape_avito,
-                                            mock_update_avito, mock_load, mock_save, mock_send, mock_dedup):
+                                              mock_scrape_vinyltap, mock_scrape_avito,
+                                              mock_update_avito, mock_load, mock_save, mock_send, mock_dedup):
         """Тест main с продвинутой дедупликацией"""
         from vinyl_monitor import main
 
@@ -1600,8 +1600,8 @@ class TestAdvancedMainFunction:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
     def test_main_with_message_chunking(self, mock_should_monitor, mock_scrape_korobka,
-                                      mock_scrape_vinyltap, mock_scrape_avito,
-                                      mock_update_avito, mock_load, mock_save, mock_send, mock_chunk):
+                                        mock_scrape_vinyltap, mock_scrape_avito,
+                                        mock_update_avito, mock_load, mock_save, mock_send, mock_chunk):
         """Тест main с разбивкой сообщений"""
         from vinyl_monitor import main
 
@@ -1637,8 +1637,8 @@ class TestAdvancedMainFunction:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
     def test_main_with_mixed_sources(self, mock_should_monitor, mock_scrape_korobka,
-                                   mock_scrape_vinyltap, mock_scrape_avito,
-                                   mock_update_avito, mock_load, mock_save, mock_send):
+                                     mock_scrape_vinyltap, mock_scrape_avito,
+                                     mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main с элементами из разных источников"""
         from vinyl_monitor import main
 
@@ -1742,9 +1742,8 @@ class TestEdgeCasesAndErrorHandling:
         # Тест с пустым сообщением
         with patch('vinyl_monitor.requests.post') as mock_post:
             mock_post.return_value.json.return_value = {"ok": True}
-            result = send_telegram("")
+            send_telegram("")
             # send_telegram может возвращать None при пустом сообщении
-            # assert result == True
 
         # Тест с очень длинным сообщением
         long_message = "A" * 10000
@@ -1797,7 +1796,7 @@ class TestEdgeCasesAndErrorHandling:
             mock_path.parent = MagicMock()
             mock_path.parent.exists.return_value = False
             result = should_monitor_site("test_site", 1)
-            assert result == True
+            assert result is True
 
         # Тест с поврежденным файлом
         with patch('vinyl_monitor.STATE_PATH') as mock_path:
@@ -1805,7 +1804,7 @@ class TestEdgeCasesAndErrorHandling:
             mock_path.parent.exists.return_value = True
             with patch('builtins.open', mock_open(read_data="invalid json")):
                 result = should_monitor_site("test_site", 1)
-                assert result == True
+                assert result is True
 
     def test_update_last_check_time_edge_cases(self):
         """Тест обновления времени последней проверки для граничных случаев"""
@@ -1933,7 +1932,7 @@ class TestMessageFormatValidation:
 - Invalid line without link — €25,00
 - <a href="https://vinyltap.co.uk/item2">Test Album</a> — €30,00"""
 
-        assert validate_message_format(mixed_message) == False
+        assert validate_message_format(mixed_message) is False
 
     def test_validate_message_format_real_example(self):
         """Тест валидации реального примера сообщения"""
@@ -1974,8 +1973,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
     def test_main_all_sites_monitored(self, mock_should_monitor, mock_scrape_korobka,
-                                     mock_scrape_vinyltap, mock_scrape_avito,
-                                     mock_update_avito, mock_load, mock_save, mock_send):
+                                      mock_scrape_vinyltap, mock_scrape_avito,
+                                      mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main когда все сайты мониторятся"""
         from vinyl_monitor import main
 
@@ -2014,8 +2013,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
     def test_main_no_sites_monitored(self, mock_should_monitor, mock_scrape_korobka,
-                                   mock_scrape_vinyltap, mock_scrape_avito,
-                                   mock_update_avito, mock_load, mock_save, mock_send):
+                                     mock_scrape_vinyltap, mock_scrape_avito,
+                                     mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main когда ни один сайт не мониторится"""
         from vinyl_monitor import main
 
@@ -2046,8 +2045,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
     def test_main_with_duplicates(self, mock_should_monitor, mock_scrape_korobka,
-                                mock_scrape_vinyltap, mock_scrape_avito,
-                                mock_update_avito, mock_load, mock_save, mock_send):
+                                  mock_scrape_vinyltap, mock_scrape_avito,
+                                  mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main с дубликатами"""
         from vinyl_monitor import main
 
@@ -2081,8 +2080,8 @@ class TestMainFunctionAdvanced:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.should_monitor_site')
     def test_main_avito_only(self, mock_should_monitor, mock_scrape_korobka,
-                           mock_scrape_vinyltap, mock_scrape_avito,
-                           mock_update_avito, mock_load, mock_save, mock_send):
+                             mock_scrape_vinyltap, mock_scrape_avito,
+                             mock_update_avito, mock_load, mock_save, mock_send):
         """Тест main только с Авито"""
         from vinyl_monitor import main
 
