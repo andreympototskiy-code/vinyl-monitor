@@ -606,7 +606,7 @@ class TestConvertState:
 
         # Мокаем открытие файлов - один для чтения, один для записи
         mock_file = mock_open(read_data=json.dumps(old_data))
-        
+
         with patch('builtins.open', mock_file):
             convert_state()
 
@@ -629,7 +629,7 @@ class TestManageAvito:
         """Тест сохранения конфигурации"""
         from manage_avito import save_config
         test_config = {"enabled": True, "search_queries": ["test"]}
-        
+
         with patch('builtins.open', mock_open()) as mock_file:
             save_config(test_config)
             mock_file.assert_called_once()
@@ -637,7 +637,7 @@ class TestManageAvito:
     def test_add_query_new(self):
         """Тест добавления нового запроса"""
         from manage_avito import add_query
-        
+
         with patch('manage_avito.load_config', return_value={}):
             with patch('manage_avito.save_config') as mock_save:
                 with patch('builtins.print') as mock_print:
@@ -648,7 +648,7 @@ class TestManageAvito:
     def test_set_interval(self):
         """Тест установки интервала"""
         from manage_avito import set_interval
-        
+
         with patch('manage_avito.load_config', return_value={}):
             with patch('manage_avito.save_config') as mock_save:
                 with patch('builtins.print') as mock_print:
@@ -663,7 +663,7 @@ class TestAdditionalVinylMonitor:
     def test_validate_url_valid(self):
         """Тест валидации корректного URL"""
         from vinyl_monitor import validate_url
-        
+
         assert validate_url("https://example.com") is True
         assert validate_url("http://test.com") is True
         assert validate_url("https://very-long-domain-name.com/path") is True
@@ -671,7 +671,7 @@ class TestAdditionalVinylMonitor:
     def test_validate_url_invalid(self):
         """Тест валидации некорректного URL"""
         from vinyl_monitor import validate_url
-        
+
         assert validate_url("") is False
         assert validate_url(None) is False
         assert validate_url("not-a-url") is False
@@ -681,17 +681,17 @@ class TestAdditionalVinylMonitor:
     def test_chunk_messages_edge_cases(self):
         """Тест разбивки сообщений на граничные случаи"""
         from vinyl_monitor import chunk_messages
-        
+
         # Пустое сообщение
         result = chunk_messages("")
         assert result == [""]
-        
+
         # Сообщение точно по лимиту
         message = "x" * 4096
         result = chunk_messages(message, 4096)
         assert len(result) == 1
         assert result[0] == message
-        
+
         # Сообщение на 1 символ больше лимита
         message = "x" * 4097
         result = chunk_messages(message, 4096)
@@ -703,17 +703,17 @@ class TestAdditionalVinylMonitor:
     def test_safe_scrape_with_exception(self):
         """Тест safe_scrape с исключением"""
         from vinyl_monitor import safe_scrape
-        
+
         def failing_func(url):
             raise Exception("Test error")
-        
+
         result = safe_scrape(failing_func, "https://test.com")
         assert result == []
 
     def test_send_telegram_missing_token(self):
         """Тест отправки Telegram без токена"""
         from vinyl_monitor import send_telegram
-        
+
         with patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', ''):
             with patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat'):
                 with patch('builtins.print') as mock_print:
@@ -723,7 +723,7 @@ class TestAdditionalVinylMonitor:
     def test_send_telegram_missing_chat_id(self):
         """Тест отправки Telegram без chat_id"""
         from vinyl_monitor import send_telegram
-        
+
         with patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token'):
             with patch('vinyl_monitor.TELEGRAM_CHAT_ID', ''):
                 with patch('builtins.print') as mock_print:
