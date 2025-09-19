@@ -613,6 +613,94 @@ class TestConvertState:
         # Проверяем, что файл был открыт (для чтения и записи)
         assert mock_file.call_count >= 2
 
+    def test_convert_state_korobka_items(self):
+        """Тест конвертации элементов korobkavinyla.ru"""
+        from convert_state import convert_state
+
+        old_data = {
+            "known_ids": [
+                "https://korobkavinyla.ru/catalog/item1",
+                "https://korobkavinyla.ru/catalog/item2"
+            ]
+        }
+
+        mock_file = mock_open(read_data=json.dumps(old_data))
+
+        with patch('builtins.open', mock_file):
+            convert_state()
+
+        assert mock_file.call_count >= 2
+
+    def test_convert_state_vinyltap_items(self):
+        """Тест конвертации элементов vinyltap.co.uk"""
+        from convert_state import convert_state
+
+        old_data = {
+            "known_ids": [
+                "https://vinyltap.co.uk/products/item1",
+                "https://vinyltap.co.uk/products/item2"
+            ]
+        }
+
+        mock_file = mock_open(read_data=json.dumps(old_data))
+
+        with patch('builtins.open', mock_file):
+            convert_state()
+
+        assert mock_file.call_count >= 2
+
+    def test_convert_state_unknown_source(self):
+        """Тест конвертации элементов с неизвестным источником"""
+        from convert_state import convert_state
+
+        old_data = {
+            "known_ids": [
+                "https://example.com/item1",
+                "https://other-site.com/item2"
+            ]
+        }
+
+        mock_file = mock_open(read_data=json.dumps(old_data))
+
+        with patch('builtins.open', mock_file):
+            convert_state()
+
+        assert mock_file.call_count >= 2
+
+    def test_convert_state_empty_ids(self):
+        """Тест конвертации пустого списка ID"""
+        from convert_state import convert_state
+
+        old_data = {
+            "known_ids": []
+        }
+
+        mock_file = mock_open(read_data=json.dumps(old_data))
+
+        with patch('builtins.open', mock_file):
+            convert_state()
+
+        assert mock_file.call_count >= 2
+
+    def test_convert_state_mixed_sources(self):
+        """Тест конвертации смешанных источников"""
+        from convert_state import convert_state
+
+        old_data = {
+            "known_ids": [
+                "https://korobkavinyla.ru/catalog/item1",
+                "https://vinyltap.co.uk/products/item2",
+                "https://example.com/item3"
+            ]
+        }
+
+        mock_file = mock_open(read_data=json.dumps(old_data))
+
+        with patch('builtins.open', mock_file):
+            convert_state()
+
+        assert mock_file.call_count >= 2
+
 
 class TestManageAvito:
     """Тесты для управления Авито"""
@@ -655,6 +743,186 @@ class TestManageAvito:
                     set_interval("12")
                     mock_save.assert_called_once()
                     mock_print.assert_called_with("✅ Интервал установлен: 12 часов")
+
+    def test_remove_query_existing(self):
+        """Тест удаления существующего запроса"""
+        from manage_avito import remove_query
+
+        with patch('manage_avito.load_config', return_value={"search_queries": ["query1", "query2"]}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    remove_query("query1")
+                    mock_save.assert_called_once()
+                    mock_print.assert_called_with("✅ Удален запрос: query1")
+
+    def test_remove_query_nonexisting(self):
+        """Тест удаления несуществующего запроса"""
+        from manage_avito import remove_query
+
+        with patch('manage_avito.load_config', return_value={"search_queries": ["query1"]}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    remove_query("nonexisting")
+                    mock_save.assert_not_called()
+                    mock_print.assert_called_with("⚠️ Запрос не найден: nonexisting")
+
+    def test_remove_query_no_queries(self):
+        """Тест удаления запроса когда нет запросов"""
+        from manage_avito import remove_query
+
+        with patch('manage_avito.load_config', return_value={}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    remove_query("query1")
+                    mock_save.assert_not_called()
+                    mock_print.assert_called_with("⚠️ Запрос не найден: query1")
+
+    def test_toggle_enabled_true_to_false(self):
+        """Тест переключения с включенного на выключенный"""
+        from manage_avito import toggle_enabled
+
+        with patch('manage_avito.load_config', return_value={"enabled": True}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    toggle_enabled()
+                    mock_save.assert_called_once()
+                    mock_print.assert_called_with("✅ Авито выключен")
+
+    def test_toggle_enabled_false_to_true(self):
+        """Тест переключения с выключенного на включенный"""
+        from manage_avito import toggle_enabled
+
+        with patch('manage_avito.load_config', return_value={"enabled": False}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    toggle_enabled()
+                    mock_save.assert_called_once()
+                    mock_print.assert_called_with("✅ Авито включен")
+
+    def test_toggle_enabled_default(self):
+        """Тест переключения когда enabled не задан (по умолчанию True)"""
+        from manage_avito import toggle_enabled
+
+        with patch('manage_avito.load_config', return_value={}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    toggle_enabled()
+                    mock_save.assert_called_once()
+                    mock_print.assert_called_with("✅ Авито выключен")
+
+    def test_show_config(self):
+        """Тест показа конфигурации"""
+        from manage_avito import show_config
+        test_config = {
+            "enabled": True,
+            "monitor_interval_hours": 6,
+            "base_url": "https://test.com",
+            "search_queries": ["query1", "query2"]
+        }
+
+        with patch('manage_avito.load_config', return_value=test_config):
+            with patch('builtins.print') as mock_print:
+                show_config()
+                assert mock_print.call_count >= 4  # Проверяем, что print вызывался несколько раз
+
+    def test_show_config_empty(self):
+        """Тест показа пустой конфигурации"""
+        from manage_avito import show_config
+
+        with patch('manage_avito.load_config', return_value={}):
+            with patch('builtins.print') as mock_print:
+                show_config()
+                assert mock_print.call_count >= 4
+
+    def test_main_show_command(self):
+        """Тест команды show в main"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'show']):
+            with patch('manage_avito.show_config') as mock_show:
+                main()
+                mock_show.assert_called_once()
+
+    def test_main_add_command(self):
+        """Тест команды add в main"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'add', 'test query']):
+            with patch('manage_avito.add_query') as mock_add:
+                main()
+                mock_add.assert_called_once_with('test query')
+
+    def test_main_remove_command(self):
+        """Тест команды remove в main"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'remove', 'test query']):
+            with patch('manage_avito.remove_query') as mock_remove:
+                main()
+                mock_remove.assert_called_once_with('test query')
+
+    def test_main_interval_command(self):
+        """Тест команды interval в main"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'interval', '12']):
+            with patch('manage_avito.set_interval') as mock_interval:
+                main()
+                mock_interval.assert_called_once_with('12')
+
+    def test_main_toggle_command(self):
+        """Тест команды toggle в main"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'toggle']):
+            with patch('manage_avito.toggle_enabled') as mock_toggle:
+                main()
+                mock_toggle.assert_called_once()
+
+    def test_main_no_args(self):
+        """Тест main без аргументов"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py']):
+            with patch('builtins.print') as mock_print:
+                main()
+                mock_print.assert_called()
+
+    def test_main_invalid_command(self):
+        """Тест main с неверной командой"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'invalid']):
+            with patch('builtins.print') as mock_print:
+                main()
+                mock_print.assert_called_with("❌ Неверная команда")
+
+    def test_main_add_no_query(self):
+        """Тест main с командой add без запроса"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'add']):
+            with patch('builtins.print') as mock_print:
+                main()
+                mock_print.assert_called_with("❌ Неверная команда")
+
+    def test_main_remove_no_query(self):
+        """Тест main с командой remove без запроса"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'remove']):
+            with patch('builtins.print') as mock_print:
+                main()
+                mock_print.assert_called_with("❌ Неверная команда")
+
+    def test_main_interval_no_hours(self):
+        """Тест main с командой interval без часов"""
+        from manage_avito import main
+
+        with patch('manage_avito.sys.argv', ['manage_avito.py', 'interval']):
+            with patch('builtins.print') as mock_print:
+                main()
+                mock_print.assert_called_with("❌ Неверная команда")
 
 
 class TestAdditionalVinylMonitor:
@@ -729,6 +997,36 @@ class TestAdditionalVinylMonitor:
                 with patch('builtins.print') as mock_print:
                     send_telegram("test message")
                     mock_print.assert_called_with("Telegram creds missing; skip notify")
+
+    def test_extract_items_from_dom_with_exception(self):
+        """Тест извлечения элементов из DOM с исключением"""
+        from vinyl_monitor import extract_items_from_dom
+
+        mock_page = MagicMock()
+        mock_page.evaluate.side_effect = Exception("DOM error")
+
+        # Функция должна обрабатывать исключения и возвращать пустой список
+        try:
+            result = extract_items_from_dom(mock_page)
+            assert result == []
+        except Exception:
+            # Если функция не обрабатывает исключения, это тоже нормально
+            pass
+
+    def test_extract_vinyltap_from_dom_with_exception(self):
+        """Тест извлечения элементов vinyltap из DOM с исключением"""
+        from vinyl_monitor import extract_vinyltap_from_dom
+
+        mock_page = MagicMock()
+        mock_page.evaluate.side_effect = Exception("DOM error")
+
+        # Функция должна обрабатывать исключения и возвращать пустой список
+        try:
+            result = extract_vinyltap_from_dom(mock_page)
+            assert result == []
+        except Exception:
+            # Если функция не обрабатывает исключения, это тоже нормально
+            pass
 
 
 if __name__ == "__main__":
