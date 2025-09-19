@@ -1529,7 +1529,7 @@ class TestDOMExtractionFunctions:
                 "id": "https://vinyltap.co.uk/item1",
                 "url": "https://vinyltap.co.uk/item1",
                 "title": "Test Vinyl LP",
-                "price": "Regular price €50,95 EUR Regular price Sale price €50,95 EUR Unit price / per"
+                "price": "Regular price £50,95 EUR Regular price Sale price £50,95 EUR Unit price / per"
             }
         ]
 
@@ -1855,8 +1855,8 @@ class TestMessageFormatValidation:
 
         # Корректное сообщение
         valid_message = """🎵 vinyltap.co.uk:
-- <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a> — €46,95
-- <a href="https://vinyltap.co.uk/item2">Test Album - Vinyl</a> — €25,00
+- <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a> — £46,95
+- <a href="https://vinyltap.co.uk/item2">Test Album - Vinyl</a> — £25,00
 
 🏠 Авито:
 - <a href="https://avito.ru/item1">Harry Potter LP</a> — 2000 руб (поиск: harry potter lp)"""
@@ -1869,7 +1869,7 @@ class TestMessageFormatValidation:
 
         # Сообщение без ссылки
         invalid_message = """🎵 vinyltap.co.uk:
-- Wilco - Schmilco - Lp — €46,95"""
+- Wilco - Schmilco - Lp — £46,95"""
 
         assert validate_message_format(invalid_message) is False
 
@@ -1889,7 +1889,7 @@ class TestMessageFormatValidation:
 
         # Сообщение с пустым названием
         invalid_message = """🎵 vinyltap.co.uk:
-- <a href="https://vinyltap.co.uk/item1"></a> — €46,95"""
+- <a href="https://vinyltap.co.uk/item1"></a> — £46,95"""
 
         assert validate_message_format(invalid_message) is False
 
@@ -1899,7 +1899,7 @@ class TestMessageFormatValidation:
 
         # Сообщение без названия
         invalid_message = """🎵 vinyltap.co.uk:
-- <a href="https://vinyltap.co.uk/item1">(без названия)</a> — €46,95"""
+- <a href="https://vinyltap.co.uk/item1">(без названия)</a> — £46,95"""
 
         assert validate_message_format(invalid_message) is False
 
@@ -1928,9 +1928,9 @@ class TestMessageFormatValidation:
 
         # Сообщение со смешанными строками
         mixed_message = """🎵 vinyltap.co.uk:
-- <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a> — €46,95
-- Invalid line without link — €25,00
-- <a href="https://vinyltap.co.uk/item2">Test Album</a> — €30,00"""
+- <a href="https://vinyltap.co.uk/item1">Wilco - Schmilco - Lp</a> — £46,95
+- Invalid line without link — £25,00
+- <a href="https://vinyltap.co.uk/item2">Test Album</a> — £30,00"""
 
         assert validate_message_format(mixed_message) is False
 
@@ -1940,8 +1940,8 @@ class TestMessageFormatValidation:
 
         # Реальный пример сообщения
         real_message = """🎵 vinyltap.co.uk:
-- <a href="https://vinyltap.co.uk/products/david-holmes-black-bag">David Holmes - Black Bag (Original Motion Picture Soundtrack) - Lp</a> — €50,95
-- <a href="https://vinyltap.co.uk/products/stereolab-fed-up">Stereolab - Fed Up With Your Job? / Constant And Uniform Movement Unknown - 7 Inch</a> — €18,95
+- <a href="https://vinyltap.co.uk/products/david-holmes-black-bag">David Holmes - Black Bag (Original Motion Picture Soundtrack) - Lp</a> — £50,95
+- <a href="https://vinyltap.co.uk/products/stereolab-fed-up">Stereolab - Fed Up With Your Job? / Constant And Uniform Movement Unknown - 7 Inch</a> — £18,95
 
 🏠 Авито:
 - <a href="https://avito.ru/item1">Harry Potter LP</a> — 2000 руб (поиск: harry potter lp)
@@ -1959,6 +1959,16 @@ class TestMessageFormatValidation:
 - <a href="https://avito.ru/item2">Снежная королева LP</a> — 1800 руб (поиск: Снежная королева lp)"""
 
         assert validate_message_format(message_with_query) is True
+
+    def test_validate_message_format_duplicate_price(self):
+        """Тест валидации сообщения с дублированной ценой"""
+        from vinyl_monitor import validate_message_format
+
+        # Сообщение с дублированной ценой (должно быть невалидным)
+        duplicate_price_message = """🎵 vinyltap.co.uk:
+- <a href="https://vinyltap.co.uk/item1">Test Album - Lp</a> — £28,95 EUR £28,95 EUR"""
+
+        assert validate_message_format(duplicate_price_message) is False
 
 
 class TestMainFunctionAdvanced:

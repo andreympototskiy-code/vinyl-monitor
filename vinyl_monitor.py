@@ -462,6 +462,19 @@ def validate_message_format(message: str) -> bool:
             if not title or title == '(без названия)':
                 return False
 
+            # Проверяем цену на дублирование
+            price_part = content[content.find(' — ') + 3:].strip()
+            if price_part:
+                # Проверяем на дублирование валютных символов
+                currency_symbols = ['£', '€', '$', 'руб']
+                for symbol in currency_symbols:
+                    if price_part.count(symbol) > 1:
+                        return False
+                
+                # Проверяем на дублирование EUR/GBP
+                if price_part.count('EUR') > 1 or price_part.count('GBP') > 1:
+                    return False
+
     return True
 
 
@@ -559,10 +572,22 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
               }
 
               if (foundCurrency) {
+                // Разбиваем по символу валюты
                 const priceParts = price.split(foundCurrency);
                 if (priceParts.length > 2) {
-                  // Берем только первую цену
+                  // Берем только первую цену (часть до первого символа валюты + символ + часть после)
                   price = priceParts[0] + foundCurrency + priceParts[1];
+                }
+                
+                // Дополнительная проверка на дублирование EUR
+                if (price.includes('EUR') && price.includes('€')) {
+                  // Убираем дублирование EUR после €
+                  price = price.replace(/€([^€]*?)EUR\s*€\1EUR/g, '€$1EUR');
+                  // Если все еще есть дублирование, берем только первую часть
+                  if (price.includes('€') && price.split('€').length > 2) {
+                    const parts = price.split('€');
+                    price = parts[0] + '€' + parts[1];
+                  }
                 }
               }
               break;
@@ -785,10 +810,19 @@ def main():
             lines.append("🎵 vinyltap.co.uk:")
             for it in tap_items:
                 title = it.get('title', '(без названия)')
-                price = f" — {it['price']}" if it.get('price') else ''
+                price = it.get('price', '')
+                
+                # Исправляем валюту для vinyltap.co.uk (должна быть £, а не €)
+                if price and '€' in price:
+                    # Заменяем € на £ для vinyltap.co.uk
+                    price = price.replace('€', '£')
+                    # Убираем EUR и заменяем на GBP
+                    price = price.replace('EUR', 'GBP')
+                
+                price_str = f" — {price}" if price else ''
                 url = it['url']
                 safe_title = escape(title)
-                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price}")
+                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price_str}")
 
         if avito_items:
             lines.append("🏠 Авито:")
