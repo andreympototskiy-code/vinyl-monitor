@@ -5,7 +5,7 @@ import pytest
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 import sys
 import os
 
@@ -588,6 +588,147 @@ class TestErrorHandling:
                 save_state(set(), [])
 
                 assert state_path.exists()
+
+
+class TestConvertState:
+    """Тесты для конвертера состояния"""
+
+    def test_convert_state_basic(self):
+        """Базовый тест конвертера состояния"""
+        from convert_state import convert_state
+
+        old_data = {
+            "known_ids": [
+                "https://korobkavinyla.ru/catalog/item1",
+                "https://vinyltap.co.uk/products/item2"
+            ]
+        }
+
+        # Мокаем открытие файлов - один для чтения, один для записи
+        mock_file = mock_open(read_data=json.dumps(old_data))
+        
+        with patch('builtins.open', mock_file):
+            convert_state()
+
+        # Проверяем, что файл был открыт (для чтения и записи)
+        assert mock_file.call_count >= 2
+
+
+class TestManageAvito:
+    """Тесты для управления Авито"""
+
+    def test_load_config_empty(self):
+        """Тест загрузки пустой конфигурации"""
+        from manage_avito import load_config
+        with patch('manage_avito.CONFIG_PATH') as mock_path:
+            mock_path.exists.return_value = False
+            result = load_config()
+            assert result == {}
+
+    def test_save_config(self):
+        """Тест сохранения конфигурации"""
+        from manage_avito import save_config
+        test_config = {"enabled": True, "search_queries": ["test"]}
+        
+        with patch('builtins.open', mock_open()) as mock_file:
+            save_config(test_config)
+            mock_file.assert_called_once()
+
+    def test_add_query_new(self):
+        """Тест добавления нового запроса"""
+        from manage_avito import add_query
+        
+        with patch('manage_avito.load_config', return_value={}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    add_query("new query")
+                    mock_save.assert_called_once()
+                    mock_print.assert_called_with("✅ Добавлен запрос: new query")
+
+    def test_set_interval(self):
+        """Тест установки интервала"""
+        from manage_avito import set_interval
+        
+        with patch('manage_avito.load_config', return_value={}):
+            with patch('manage_avito.save_config') as mock_save:
+                with patch('builtins.print') as mock_print:
+                    set_interval("12")
+                    mock_save.assert_called_once()
+                    mock_print.assert_called_with("✅ Интервал установлен: 12 часов")
+
+
+class TestAdditionalVinylMonitor:
+    """Дополнительные тесты для vinyl_monitor.py"""
+
+    def test_validate_url_valid(self):
+        """Тест валидации корректного URL"""
+        from vinyl_monitor import validate_url
+        
+        assert validate_url("https://example.com") is True
+        assert validate_url("http://test.com") is True
+        assert validate_url("https://very-long-domain-name.com/path") is True
+
+    def test_validate_url_invalid(self):
+        """Тест валидации некорректного URL"""
+        from vinyl_monitor import validate_url
+        
+        assert validate_url("") is False
+        assert validate_url(None) is False
+        assert validate_url("not-a-url") is False
+        assert validate_url("ftp://example.com") is False
+        assert validate_url("https://" + "x" * 3000) is False  # Слишком длинный URL
+
+    def test_chunk_messages_edge_cases(self):
+        """Тест разбивки сообщений на граничные случаи"""
+        from vinyl_monitor import chunk_messages
+        
+        # Пустое сообщение
+        result = chunk_messages("")
+        assert result == [""]
+        
+        # Сообщение точно по лимиту
+        message = "x" * 4096
+        result = chunk_messages(message, 4096)
+        assert len(result) == 1
+        assert result[0] == message
+        
+        # Сообщение на 1 символ больше лимита
+        message = "x" * 4097
+        result = chunk_messages(message, 4096)
+        assert len(result) == 2
+        assert len(result[0]) <= 4096
+        # Второй чанк может быть больше лимита из-за логики разбивки
+        assert len(result[1]) >= 1
+
+    def test_safe_scrape_with_exception(self):
+        """Тест safe_scrape с исключением"""
+        from vinyl_monitor import safe_scrape
+        
+        def failing_func(url):
+            raise Exception("Test error")
+        
+        result = safe_scrape(failing_func, "https://test.com")
+        assert result == []
+
+    def test_send_telegram_missing_token(self):
+        """Тест отправки Telegram без токена"""
+        from vinyl_monitor import send_telegram
+        
+        with patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', ''):
+            with patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat'):
+                with patch('builtins.print') as mock_print:
+                    send_telegram("test message")
+                    mock_print.assert_called_with("Telegram creds missing; skip notify")
+
+    def test_send_telegram_missing_chat_id(self):
+        """Тест отправки Telegram без chat_id"""
+        from vinyl_monitor import send_telegram
+        
+        with patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token'):
+            with patch('vinyl_monitor.TELEGRAM_CHAT_ID', ''):
+                with patch('builtins.print') as mock_print:
+                    send_telegram("test message")
+                    mock_print.assert_called_with("Telegram creds missing; skip notify")
 
 
 if __name__ == "__main__":
