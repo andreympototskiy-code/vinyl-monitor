@@ -65,23 +65,23 @@ def get_item_info(item_id: str) -> Dict:
 def should_monitor_site(site_name: str, interval_hours: int) -> bool:
     """Проверить, нужно ли мониторить сайт сейчас"""
     from datetime import datetime, timedelta
-    
+
     # Путь к файлу с временем последнего мониторинга
     last_check_file = STATE_PATH.parent / f"last_check_{site_name}.txt"
-    
+
     if not last_check_file.exists():
         # Если файла нет, значит мониторим впервые
         return True
-    
+
     try:
         with open(last_check_file, "r") as f:
             last_check_str = f.read().strip()
             last_check = datetime.fromisoformat(last_check_str)
-        
+
         # Проверяем, прошло ли достаточно времени
         time_since_last = datetime.now() - last_check
         return time_since_last >= timedelta(hours=interval_hours)
-    
+
     except Exception:
         # Если ошибка при чтении, мониторим
         return True
@@ -90,7 +90,7 @@ def should_monitor_site(site_name: str, interval_hours: int) -> bool:
 def update_last_check_time(site_name: str):
     """Обновить время последней проверки сайта"""
     from datetime import datetime
-    
+
     last_check_file = STATE_PATH.parent / f"last_check_{site_name}.txt"
     with open(last_check_file, "w") as f:
         f.write(datetime.now().isoformat())
@@ -105,7 +105,7 @@ def load_avito_config() -> Dict:
                 return json.load(f)
         except Exception:
             pass
-    
+
     # Возвращаем конфигурацию по умолчанию
     return {
         "search_queries": ["poets of the fall", "harry potter", "Снежная королева"],
@@ -119,22 +119,22 @@ def load_avito_config() -> Dict:
 def scrape_avito_with_playwright() -> List[Dict]:
     """Сканировать Авито на предмет виниловых пластинок"""
     config = load_avito_config()
-    
+
     if not config.get("enabled", True):
         print("⏰ Авито: отключен в конфигурации")
         return []
-    
+
     if not should_monitor_site("avito", config.get("monitor_interval_hours", 6)):
         print("⏰ Авито: пропуск (интервал 6 часов)")
         return []
-    
+
     print("🔍 Сканирование Авито...")
-    
+
     items = []
     search_queries = config.get("search_queries", [])
     base_url = config.get("base_url", "https://www.avito.ru/sankt_peterburg_i_lo")
     category = config.get("category", "kollektsionirovanie")
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
@@ -151,36 +151,36 @@ def scrape_avito_with_playwright() -> List[Dict]:
         )
         page = context.new_page()
         page.set_default_timeout(REQUEST_TIMEOUT_SEC * 1000)
-        
+
         for query in search_queries:
             try:
                 # Формируем URL для поиска
                 search_url = f"{base_url}{category}?cd=1&q={query.replace(' ', '+')}"
                 print(f"  Поиск: {query}")
-                
+
                 # Загружаем страницу
                 page.goto(search_url, wait_until="load", timeout=REQUEST_TIMEOUT_SEC * 1000)
                 time.sleep(2)
-                
+
                 # Извлекаем результаты
                 js = """
                 () => {
                   const items = [];
                   const listings = document.querySelectorAll('[data-marker="item"]');
-                  
+
                   for (const listing of listings) {
                     const titleEl = listing.querySelector('[data-marker="item-title"]');
                     const priceEl = listing.querySelector('[data-marker="item-price"]');
                     const linkEl = listing.querySelector('a[data-marker="item-title"]');
-                    
+
                     if (titleEl && linkEl) {
                       const title = titleEl.textContent.trim();
                       const price = priceEl ? priceEl.textContent.trim() : '';
                       const url = linkEl.href;
-                      
+
                       // Проверяем, что это виниловая пластинка
-                      if (title.toLowerCase().includes('винил') || 
-                          title.toLowerCase().includes('lp') || 
+                      if (title.toLowerCase().includes('винил') ||
+                          title.toLowerCase().includes('lp') ||
                           title.toLowerCase().includes('vinyl') ||
                           title.toLowerCase().includes('пластинка')) {
                         items.push({
@@ -193,25 +193,25 @@ def scrape_avito_with_playwright() -> List[Dict]:
                       }
                     }
                   }
-                  
+
                   return items;
                 }
                 """
-                
+
                 query_items = page.evaluate(js, query)
                 items.extend(query_items)
                 print(f"    Найдено: {len(query_items)} позиций")
-                
+
             except Exception as e:
                 print(f"    Ошибка при поиске '{query}': {e}")
                 continue
-        
+
         browser.close()
-    
+
     # Добавляем источник
     for item in items:
         item["source"] = "avito.ru"
-    
+
     print(f"📦 Найдено {len(items)} позиций на Авито")
     update_last_check_time("avito")
     return items
@@ -219,7 +219,7 @@ def scrape_avito_with_playwright() -> List[Dict]:
 
 def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Загружаем существующие данные
     existing_data = {}
     if STATE_PATH.exists():
@@ -234,7 +234,7 @@ def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
                         existing_data[item_id] = {"added_at": "unknown"}
         except Exception:
             pass
-    
+
     # Добавляем новые элементы с timestamp
     if new_items:
         from datetime import datetime
@@ -247,7 +247,7 @@ def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
                     "title": item.get("title", ""),
                     "source": item.get("source", "")
                 }
-    
+
     # Сохраняем в новом формате
     with open(STATE_PATH, "w", encoding="utf-8") as f:
         json.dump({"known_items": existing_data}, f, ensure_ascii=False, indent=2)
@@ -273,19 +273,19 @@ def send_telegram(text: str) -> None:
         print(f"Failed to send Telegram: {e}")
 
 
+def validate_url(url: str) -> bool:
+    """Валидация URL"""
+    if not url or not isinstance(url, str):
+        return False
+    return url.startswith(('http://', 'https://')) and len(url) < 2048
 
-    def validate_url(url: str) -> bool:
-        """Валидация URL"""
-        if not url or not isinstance(url, str):
-            return False
-        return url.startswith(('http://', 'https://')) and len(url) < 2048
-    
+
 def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
     """Улучшенная дедупликация с нормализацией URL и логированием"""
     seen = set()
     out = []
     duplicates_count = 0
-    
+
     for it in items:
         # Нормализуем URL для более надежной дедупликации
         url = it.get("url", "")
@@ -296,7 +296,7 @@ def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
             normalized_url = normalized_url.rstrip('/')
         else:
             normalized_url = it.get("id", "")
-        
+
         if normalized_url and normalized_url not in seen:
             seen.add(normalized_url)
             # Обновляем ID на нормализованный URL
@@ -305,10 +305,10 @@ def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
         else:
             duplicates_count += 1
             print(f"Дубликат найден: {normalized_url}")
-    
+
     if duplicates_count > 0:
         print(f"Найдено {duplicates_count} дубликатов, удалено")
-    
+
     return out
 
 
@@ -318,7 +318,7 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
     seen_content = set()
     out = []
     duplicates_count = 0
-    
+
     for it in items:
         # Нормализуем URL
         url = it.get("url", "")
@@ -326,22 +326,22 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
             normalized_url = url.split('?')[0].split('#')[0].rstrip('/')
         else:
             normalized_url = it.get("id", "")
-        
+
         # Создаем ключ содержимого для дополнительной проверки
         title = it.get("title", "").strip().lower()
         price = it.get("price", "").strip()
         content_key = f"{title}|{price}"
-        
+
         # Проверяем дубликаты по URL и содержимому
         is_duplicate = False
-        
+
         if normalized_url in seen_urls:
             is_duplicate = True
             print(f"Дубликат по URL: {normalized_url}")
         elif content_key in seen_content and content_key != "|":
             is_duplicate = True
             print(f"Дубликат по содержимому: {title}")
-        
+
         if not is_duplicate:
             seen_urls.add(normalized_url)
             seen_content.add(content_key)
@@ -349,10 +349,10 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
             out.append(it)
         else:
             duplicates_count += 1
-    
+
     if duplicates_count > 0:
         print(f"Найдено {duplicates_count} дубликатов (продвинутая проверка), удалено")
-    
+
     return out
 
 
@@ -469,20 +469,20 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
 
         // ФИЛЬТРАЦИЯ: только виниловые пластинки (LP, Vinyl, 7 Inch, 12 Inch)
         const titleLower = title.toLowerCase();
-        const isVinyl = titleLower.includes('lp') || 
-                       titleLower.includes('vinyl') || 
-                       titleLower.includes('7 inch') || 
+        const isVinyl = titleLower.includes('lp') ||
+                       titleLower.includes('vinyl') ||
+                       titleLower.includes('7 inch') ||
                        titleLower.includes('12 inch') ||
                        titleLower.includes('7"') ||
                        titleLower.includes('12"') ||
                        (titleLower.includes('inch') && !titleLower.includes('cd') && !titleLower.includes('dvd'));
-        
+
         // Исключаем CD, DVD, кассеты
-        const isNotVinyl = titleLower.includes('cd') || 
-                          titleLower.includes('dvd') || 
+        const isNotVinyl = titleLower.includes('cd') ||
+                          titleLower.includes('dvd') ||
                           titleLower.includes('cassette') ||
                           titleLower.includes('tape');
-        
+
         if (!isVinyl || isNotVinyl) {
           continue; // Пропускаем невиниловые товары
         }
@@ -501,7 +501,7 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
                           .replace(/EUR\s*/gi, '€')
                           .replace(/\s+/g, ' ')
                           .trim();
-              
+
               // Убираем дублирование цены (если есть повторяющиеся части)
               const priceParts = price.split('€');
               if (priceParts.length > 2) {
@@ -526,7 +526,7 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
 def scrape_with_playwright() -> List[Dict]:
     all_items = []
     urls = [CATALOG_URL, KOROBKA_SALE_URL]
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
@@ -543,12 +543,12 @@ def scrape_with_playwright() -> List[Dict]:
         )
         page = context.new_page()
         page.set_default_timeout(REQUEST_TIMEOUT_SEC * 1000)
-        
+
         for url in urls:
             try:
                 section_name = "каталог" if "Sale" not in url else "скидки"
                 print(f"  Сканирование {section_name}: {url}")
-                
+
                 # Пытаемся загрузить страницу с повторными попытками
                 for attempt in range(3):
                     try:
@@ -561,7 +561,7 @@ def scrape_with_playwright() -> List[Dict]:
                         else:
                             print(f"    Не удалось загрузить {section_name} после 3 попыток")
                             continue
-                
+
                 time.sleep(1.2)
 
                 clicks = 0
@@ -580,23 +580,23 @@ def scrape_with_playwright() -> List[Dict]:
                 items = extract_items_from_dom(page)
                 print(f"    Найдено: {len(items)} позиций")
                 all_items.extend(items)
-                    
+
             except Exception as e:
                 print(f"    Ошибка при сканировании {section_name}: {e}")
                 continue
-        
+
         browser.close()
-        
+
         # Добавляем источник
         for item in all_items:
             item["source"] = "korobkavinyla.ru"
-        
+
         return all_items
 
 
 def scrape_vinyltap_with_playwright() -> List[Dict]:
     all_items = []
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
@@ -613,11 +613,11 @@ def scrape_vinyltap_with_playwright() -> List[Dict]:
         )
         page = context.new_page()
         page.set_default_timeout(REQUEST_TIMEOUT_SEC * 1000)
-        
+
         for url in VINYLTAP_URLS:
             try:
                 print(f"  Сканирование: {url}")
-                
+
                 # Пытаемся загрузить страницу с повторными попытками
                 for attempt in range(3):
                     try:
@@ -630,7 +630,7 @@ def scrape_vinyltap_with_playwright() -> List[Dict]:
                         else:
                             print(f"    Не удалось загрузить {url} после 3 попыток")
                             continue
-                
+
                 time.sleep(1.2)
 
                 # Попробуем нажать кнопку подгрузки, если есть
@@ -651,17 +651,17 @@ def scrape_vinyltap_with_playwright() -> List[Dict]:
                     all_items.extend(items)
                 except Exception as e:
                     print(f"    Ошибка при извлечении данных: {e}")
-                    
+
             except Exception as e:
                 print(f"    Ошибка при сканировании {url}: {e}")
                 continue
-        
+
         browser.close()
-        
+
         # Добавляем источник
         for item in all_items:
             item["source"] = "vinyltap.co.uk"
-        
+
         return all_items
 
 
@@ -682,7 +682,7 @@ def main():
         else:
             print("⏰ korobkavinyla.ru: пропуск (интервал 24 часа)")
             korobka_items = []
-        
+
         # Проверяем, нужно ли мониторить vinyltap.co.uk
         if should_monitor_site("vinyltap", VINYLTAP_MONITOR_INTERVAL_HOURS):
             print("🔍 Сканирование vinyltap.co.uk...")
@@ -693,7 +693,7 @@ def main():
         else:
             print("⏰ vinyltap.co.uk: пропуск (интервал 3 часа)")
             vinyltap_items = []
-        
+
         # Проверяем, нужно ли мониторить Авито
         avito_items = scrape_avito_with_playwright()
         items.extend(avito_items)
@@ -706,7 +706,7 @@ def main():
 
     current_ids = {it["id"] for it in items}
     new_ids = [it for it in items if it["id"] not in known]
-    
+
     print(f"🆕 Найдено {len(new_ids)} новых позиций из {len(items)} общих")
 
     if new_ids:
@@ -718,7 +718,7 @@ def main():
         if kor_items:
             lines.append("🎵 korobkavinyla.ru:")
             for it in kor_items:
-                title = it.get('title','(без названия)')
+                title = it.get('title', '(без названия)')
                 price = f" — {it['price']}" if it.get('price') else ''
                 url = it['url']
                 safe_title = escape(title)
@@ -727,7 +727,7 @@ def main():
         if tap_items:
             lines.append("🎵 vinyltap.co.uk:")
             for it in tap_items:
-                title = it.get('title','(без названия)')
+                title = it.get('title', '(без названия)')
                 price = f" — {it['price']}" if it.get('price') else ''
                 url = it['url']
                 safe_title = escape(title)
@@ -736,7 +736,7 @@ def main():
         if avito_items:
             lines.append("🏠 Авито:")
             for it in avito_items:
-                title = it.get('title','(без названия)')
+                title = it.get('title', '(без названия)')
                 price = f" — {it['price']}" if it.get('price') else ''
                 url = it['url']
                 query = it.get('query', '')
@@ -748,7 +748,7 @@ def main():
         print(f"📤 Отправка {len(new_ids)} новых позиций в Telegram...")
         for chunk in chunk_messages(message):
             send_telegram(chunk)
-        
+
         # Обновляем состояние только с новыми ID
         updated_known = known.union(current_ids)
         save_state(updated_known, new_ids)
