@@ -14,9 +14,8 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # Импорты после настройки пути
-from vinyl_monitor import advanced_deduplication  # noqa: E402
-from vinyl_monitor import (dedupe_keep_order, load_avito_config, load_state,
-                           save_state, should_monitor_site)
+from vinyl_monitor import (advanced_deduplication, dedupe_keep_order, load_avito_config, load_state,
+                           save_state, should_monitor_site)  # noqa: E402
 
 
 class TestStateManagement:
@@ -391,7 +390,6 @@ class TestAdvancedDeduplication:
 
     def test_advanced_deduplication_no_duplicates(self):
         """Тест дедупликации без дубликатов"""
-        from vinyl_monitor import advanced_deduplication
 
         items = [
             {"id": "url1", "title": "Item 1", "price": "100"},
@@ -406,7 +404,6 @@ class TestAdvancedDeduplication:
 
     def test_advanced_deduplication_with_duplicates(self):
         """Тест дедупликации с дубликатами"""
-        from vinyl_monitor import advanced_deduplication
 
         items = [
             {"id": "url1", "title": "Test Item", "price": "100"},
@@ -2790,7 +2787,6 @@ class TestCompleteCoverage:
 
     def test_advanced_deduplication_url_duplicate(self):
         """Тест продвинутой дедупликации с дубликатом по URL (строки 339-340)"""
-        from vinyl_monitor import advanced_deduplication
 
         items = [
             {"id": "test1", "title": "Test Album", "price": "100", "url": "https://example.com/item1"},
@@ -2803,7 +2799,6 @@ class TestCompleteCoverage:
 
     def test_advanced_deduplication_content_duplicate(self):
         """Тест продвинутой дедупликации с дубликатом по содержимому"""
-        from vinyl_monitor import advanced_deduplication
 
         items = [
             {"id": "test1", "title": "Test Album", "price": "100", "url": "https://example.com/item1"},
