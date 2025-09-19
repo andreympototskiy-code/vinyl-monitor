@@ -2511,16 +2511,21 @@ class TestScrapingErrorHandling:
         with pytest.raises(Exception, match="Browser failed"):
             scrape_vinyltap_with_playwright()
 
+    @patch('vinyl_monitor.should_monitor_site')
     @patch('vinyl_monitor.sync_playwright')
-    def test_scrape_avito_with_playwright_browser_error(self, mock_playwright):
+    def test_scrape_avito_with_playwright_browser_error(self, mock_playwright, mock_should_monitor):
         """Тест скрапинга Avito с ошибкой браузера"""
         from vinyl_monitor import scrape_avito_with_playwright
 
+        # Мокаем, что сайт должен мониториться
+        mock_should_monitor.return_value = True
+        
         # Мокаем ошибку запуска браузера
         mock_playwright.return_value.__enter__.return_value.chromium.launch.side_effect = Exception("Browser failed")
 
-        result = scrape_avito_with_playwright()
-        assert result == []
+        # Функция должна выбросить исключение, так как не обрабатывает ошибки браузера
+        with pytest.raises(Exception, match="Browser failed"):
+            scrape_avito_with_playwright()
 
     @patch('vinyl_monitor.sync_playwright')
     def test_scrape_with_playwright_page_error(self, mock_playwright):
