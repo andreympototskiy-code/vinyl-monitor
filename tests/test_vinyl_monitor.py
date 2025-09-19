@@ -14,8 +14,9 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # Импорты после настройки пути
-from vinyl_monitor import (advanced_deduplication, dedupe_keep_order, load_avito_config, load_state,
-                           save_state, should_monitor_site)  # noqa: E402
+from vinyl_monitor import advanced_deduplication  # noqa: E402
+from vinyl_monitor import (dedupe_keep_order, load_avito_config, load_state,
+                           save_state, should_monitor_site)
 
 
 class TestStateManagement:
