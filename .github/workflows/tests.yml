@@ -38,7 +38,7 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        flake8 . --max-line-length=120 --exclude=.venv,.github --ignore=E501,W503,E128,W293,W291,E302,E305,E303,F401,E402,F541,C901,E231,E712,F841,F811
+        flake8 . --max-line-length=120 --exclude=.venv,.github --ignore=E501,W503,E128,W293,W291,E302,E305,E303,E402,F541,C901,E231
 
     - name: Run tests
       run: |
