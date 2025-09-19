@@ -2310,5 +2310,441 @@ class TestCurrencyHandling:
             assert result_price == expected_price, f"Expected '{expected_price}', got '{result_price}' for input '{input_price}'"
 
 
+class TestExceptionHandling:
+    """Тесты для обработки исключений и граничных случаев"""
+
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_load_state_corrupted_json(self, mock_state_path):
+        """Тест загрузки состояния с поврежденным JSON"""
+        from vinyl_monitor import load_state
+        
+        # Мокаем файл с поврежденным JSON
+        mock_state_path.exists.return_value = True
+        mock_state_path.read_text.return_value = '{"known_ids": [invalid json'
+        
+        result = load_state()
+        assert result == set()
+
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_load_state_io_error(self, mock_state_path):
+        """Тест загрузки состояния с ошибкой ввода-вывода"""
+        from vinyl_monitor import load_state
+        
+        # Мокаем файл с ошибкой ввода-вывода
+        mock_state_path.exists.return_value = True
+        mock_state_path.read_text.side_effect = IOError("Permission denied")
+        
+        result = load_state()
+        assert result == set()
+
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_get_item_info_corrupted_json(self, mock_state_path):
+        """Тест получения информации о позиции с поврежденным JSON"""
+        from vinyl_monitor import get_item_info
+        
+        # Мокаем файл с поврежденным JSON
+        mock_state_path.exists.return_value = True
+        mock_state_path.read_text.return_value = '{"known_items": {invalid json'
+        
+        result = get_item_info("test_id")
+        assert result == {}
+
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_get_item_info_io_error(self, mock_state_path):
+        """Тест получения информации о позиции с ошибкой ввода-вывода"""
+        from vinyl_monitor import get_item_info
+        
+        # Мокаем файл с ошибкой ввода-вывода
+        mock_state_path.exists.return_value = True
+        mock_state_path.read_text.side_effect = IOError("Permission denied")
+        
+        result = get_item_info("test_id")
+        assert result == {}
+
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_save_state_directory_creation_error(self, mock_state_path):
+        """Тест сохранения состояния с ошибкой создания директории"""
+        from vinyl_monitor import save_state
+        
+        # Мокаем ошибку создания директории
+        mock_state_path.parent.mkdir.side_effect = OSError("Permission denied")
+        
+        # Должно поднять исключение
+        with pytest.raises(OSError):
+            save_state(set(["test_id"]))
+
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_save_state_write_error(self, mock_state_path):
+        """Тест сохранения состояния с ошибкой записи"""
+        from vinyl_monitor import save_state
+        
+        # Мокаем ошибку записи
+        mock_state_path.parent.mkdir.return_value = None
+        mock_state_path.write_text.side_effect = IOError("Disk full")
+        
+        # Должно поднять исключение
+        with pytest.raises(IOError):
+            save_state(set(["test_id"]))
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_save_state_with_existing_known_items(self, mock_state_path, mock_file):
+        """Тест сохранения состояния с существующими known_items"""
+        from vinyl_monitor import save_state
+        
+        # Мокаем существующий файл с known_items
+        mock_state_path.parent.mkdir.return_value = None
+        mock_state_path.exists.return_value = True
+        
+        # Настраиваем mock_open для чтения и записи
+        mock_file.return_value.__enter__.return_value.read.return_value = '{"known_items": {"existing_id": {"added_at": "2023-01-01", "title": "Existing", "source": "test"}}}'
+        
+        new_items = [{"id": "new_id", "title": "New Item", "price": "100", "source": "test"}]
+        save_state(set(["existing_id", "new_id"]), new_items)
+        
+        # Проверяем, что open был вызван для записи
+        assert mock_file.call_count >= 1
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_save_state_with_existing_known_ids(self, mock_state_path, mock_file):
+        """Тест сохранения состояния с существующими known_ids (старый формат)"""
+        from vinyl_monitor import save_state
+        
+        # Мокаем существующий файл с known_ids (старый формат)
+        mock_state_path.parent.mkdir.return_value = None
+        mock_state_path.exists.return_value = True
+        
+        # Настраиваем mock_open для чтения и записи
+        mock_file.return_value.__enter__.return_value.read.return_value = '{"known_ids": ["old_id1", "old_id2"]}'
+        
+        new_items = [{"id": "new_id", "title": "New Item", "price": "100", "source": "test"}]
+        save_state(set(["old_id1", "old_id2", "new_id"]), new_items)
+        
+        # Проверяем, что open был вызван для записи
+        assert mock_file.call_count >= 1
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_save_state_with_corrupted_existing_file(self, mock_state_path, mock_file):
+        """Тест сохранения состояния с поврежденным существующим файлом"""
+        from vinyl_monitor import save_state
+        
+        # Мокаем поврежденный файл
+        mock_state_path.parent.mkdir.return_value = None
+        mock_state_path.exists.return_value = True
+        
+        # Настраиваем mock_open для чтения и записи
+        mock_file.return_value.__enter__.return_value.read.return_value = '{"corrupted": json}'
+        
+        new_items = [{"id": "new_id", "title": "New Item", "price": "100", "source": "test"}]
+        save_state(set(["new_id"]), new_items)
+        
+        # Проверяем, что open был вызван для записи (должен обработать ошибку)
+        assert mock_file.call_count >= 1
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_save_state_with_empty_new_items(self, mock_state_path, mock_file):
+        """Тест сохранения состояния с пустыми новыми элементами"""
+        from vinyl_monitor import save_state
+        
+        # Мокаем файл
+        mock_state_path.parent.mkdir.return_value = None
+        mock_state_path.exists.return_value = False
+        
+        save_state(set(["existing_id"]), [])
+        
+        # Проверяем, что open был вызван для записи
+        assert mock_file.call_count >= 1
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('vinyl_monitor.STATE_PATH')
+    def test_save_state_with_none_new_items(self, mock_state_path, mock_file):
+        """Тест сохранения состояния с None новыми элементами"""
+        from vinyl_monitor import save_state
+        
+        # Мокаем файл
+        mock_state_path.parent.mkdir.return_value = None
+        mock_state_path.exists.return_value = False
+        
+        save_state(set(["existing_id"]), None)
+        
+        # Проверяем, что open был вызван для записи
+        assert mock_file.call_count >= 1
+
+
+class TestScrapingErrorHandling:
+    """Тесты для обработки ошибок в функциях скрапинга"""
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_with_playwright_browser_error(self, mock_playwright):
+        """Тест скрапинга с ошибкой браузера"""
+        from vinyl_monitor import scrape_with_playwright
+        
+        # Мокаем ошибку запуска браузера
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.side_effect = Exception("Browser failed")
+        
+        # Функция должна поднять исключение, так как нет обработки ошибок
+        with pytest.raises(Exception, match="Browser failed"):
+            scrape_with_playwright()
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_vinyltap_with_playwright_browser_error(self, mock_playwright):
+        """Тест скрапинга vinyltap с ошибкой браузера"""
+        from vinyl_monitor import scrape_vinyltap_with_playwright
+        
+        # Мокаем ошибку запуска браузера
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.side_effect = Exception("Browser failed")
+        
+        # Функция должна поднять исключение, так как нет обработки ошибок
+        with pytest.raises(Exception, match="Browser failed"):
+            scrape_vinyltap_with_playwright()
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_avito_with_playwright_browser_error(self, mock_playwright):
+        """Тест скрапинга Avito с ошибкой браузера"""
+        from vinyl_monitor import scrape_avito_with_playwright
+        
+        # Мокаем ошибку запуска браузера
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.side_effect = Exception("Browser failed")
+        
+        result = scrape_avito_with_playwright()
+        assert result == []
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_with_playwright_page_error(self, mock_playwright):
+        """Тест скрапинга с ошибкой страницы"""
+        from vinyl_monitor import scrape_with_playwright
+        
+        # Мокаем Playwright
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
+        mock_browser.new_context.return_value = mock_context
+        mock_context.new_page.return_value = mock_page
+        
+        # Мокаем ошибку загрузки страницы
+        mock_page.goto.side_effect = Exception("Page load failed")
+        
+        result = scrape_with_playwright()
+        assert result == []
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_vinyltap_with_playwright_page_error(self, mock_playwright):
+        """Тест скрапинга vinyltap с ошибкой страницы"""
+        from vinyl_monitor import scrape_vinyltap_with_playwright
+        
+        # Мокаем Playwright
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
+        mock_browser.new_context.return_value = mock_context
+        mock_context.new_page.return_value = mock_page
+        
+        # Мокаем ошибку загрузки страницы
+        mock_page.goto.side_effect = Exception("Page load failed")
+        
+        result = scrape_vinyltap_with_playwright()
+        assert result == []
+
+
+class TestMainFunctionErrorHandling:
+    """Тесты для обработки ошибок в main функции"""
+
+    @patch('vinyl_monitor.should_monitor_site')
+    @patch('vinyl_monitor.scrape_with_playwright')
+    @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
+    @patch('vinyl_monitor.scrape_avito_with_playwright')
+    @patch('vinyl_monitor.load_state')
+    @patch('vinyl_monitor.save_state')
+    @patch('vinyl_monitor.send_telegram')
+    def test_main_with_scraping_errors(self, mock_send_telegram, mock_save_state, mock_load_state, 
+                                     mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+                                     mock_should_monitor):
+        """Тест main функции с ошибками скрапинга"""
+        from vinyl_monitor import main
+        
+        # Настраиваем моки
+        mock_should_monitor.return_value = True
+        mock_load_state.return_value = set()
+        mock_scrape_korobka.side_effect = Exception("Korobka failed")
+        mock_scrape_vinyltap.side_effect = Exception("Vinyltap failed")
+        mock_scrape_avito.side_effect = Exception("Avito failed")
+        
+        # main должна поднять исключение, так как нет обработки ошибок
+        with pytest.raises(Exception, match="Korobka failed"):
+            main()
+
+    @patch('vinyl_monitor.should_monitor_site')
+    @patch('vinyl_monitor.scrape_with_playwright')
+    @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
+    @patch('vinyl_monitor.scrape_avito_with_playwright')
+    @patch('vinyl_monitor.load_state')
+    @patch('vinyl_monitor.save_state')
+    @patch('vinyl_monitor.send_telegram')
+    def test_main_with_telegram_error(self, mock_send_telegram, mock_save_state, mock_load_state, 
+                                    mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+                                    mock_should_monitor):
+        """Тест main функции с ошибкой Telegram"""
+        from vinyl_monitor import main
+        
+        # Настраиваем моки
+        mock_should_monitor.return_value = True
+        mock_load_state.return_value = set()
+        mock_scrape_korobka.return_value = [{"id": "test1", "title": "Test", "price": "100"}]
+        mock_scrape_vinyltap.return_value = []
+        mock_scrape_avito.return_value = []
+        mock_send_telegram.side_effect = Exception("Telegram failed")
+        
+        # main должна поднять исключение, так как нет обработки ошибок
+        with pytest.raises(Exception, match="Telegram failed"):
+            main()
+
+    @patch('vinyl_monitor.should_monitor_site')
+    @patch('vinyl_monitor.scrape_with_playwright')
+    @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
+    @patch('vinyl_monitor.scrape_avito_with_playwright')
+    @patch('vinyl_monitor.load_state')
+    @patch('vinyl_monitor.save_state')
+    @patch('vinyl_monitor.send_telegram')
+    def test_main_with_save_state_error(self, mock_send_telegram, mock_save_state, mock_load_state, 
+                                      mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka, 
+                                      mock_should_monitor):
+        """Тест main функции с ошибкой сохранения состояния"""
+        from vinyl_monitor import main
+        
+        # Настраиваем моки
+        mock_should_monitor.return_value = True
+        mock_load_state.return_value = set()
+        mock_scrape_korobka.return_value = [{"id": "test1", "title": "Test", "price": "100"}]
+        mock_scrape_vinyltap.return_value = []
+        mock_scrape_avito.return_value = []
+        mock_save_state.side_effect = Exception("Save failed")
+        
+        # main должна поднять исключение, так как нет обработки ошибок
+        with pytest.raises(Exception, match="Save failed"):
+            main()
+
+
+class TestTelegramErrorHandling:
+    """Тесты для обработки ошибок Telegram"""
+
+    @patch('vinyl_monitor.requests.post')
+    @patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token')
+    @patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat')
+    def test_send_telegram_connection_error(self, mock_post):
+        """Тест отправки в Telegram с ошибкой соединения"""
+        import requests
+        from vinyl_monitor import send_telegram
+        
+        # Мокаем ошибку соединения
+        mock_post.side_effect = requests.exceptions.ConnectionError("Connection failed")
+        
+        # Функция должна обработать ошибку и не поднять исключение
+        result = send_telegram("Test message")
+        assert result is None  # Функция возвращает None
+
+    @patch('vinyl_monitor.requests.post')
+    @patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token')
+    @patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat')
+    def test_send_telegram_timeout_error(self, mock_post):
+        """Тест отправки в Telegram с ошибкой таймаута"""
+        import requests
+        from vinyl_monitor import send_telegram
+        
+        # Мокаем ошибку таймаута
+        mock_post.side_effect = requests.exceptions.Timeout("Timeout")
+        
+        # Функция должна обработать ошибку и не поднять исключение
+        result = send_telegram("Test message")
+        assert result is None  # Функция возвращает None
+
+    @patch('vinyl_monitor.requests.post')
+    @patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token')
+    @patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat')
+    def test_send_telegram_http_error(self, mock_post):
+        """Тест отправки в Telegram с HTTP ошибкой"""
+        from vinyl_monitor import send_telegram
+        
+        # Мокаем HTTP ошибку
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"ok": False, "description": "Bad Request"}
+        mock_post.return_value = mock_response
+        
+        # Функция должна обработать ошибку и не поднять исключение
+        result = send_telegram("Test message")
+        assert result is None  # Функция возвращает None
+
+    @patch('vinyl_monitor.requests.post')
+    @patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token')
+    @patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat')
+    def test_send_telegram_json_error(self, mock_post):
+        """Тест отправки в Telegram с ошибкой JSON"""
+        from vinyl_monitor import send_telegram
+        
+        # Мокаем ошибку JSON
+        mock_response = MagicMock()
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+        mock_post.return_value = mock_response
+        
+        # Функция должна обработать ошибку и не поднять исключение
+        result = send_telegram("Test message")
+        assert result is None  # Функция возвращает None
+
+
+class TestAvitoErrorHandling:
+    """Тесты для обработки ошибок Avito"""
+
+    @patch('vinyl_monitor.load_avito_config')
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_avito_config_error(self, mock_playwright, mock_load_config):
+        """Тест скрапинга Avito с ошибкой конфигурации"""
+        from vinyl_monitor import scrape_avito_with_playwright
+        
+        # Мокаем ошибку загрузки конфигурации
+        mock_load_config.side_effect = Exception("Config error")
+        
+        # Функция должна поднять исключение, так как нет обработки ошибок
+        with pytest.raises(Exception, match="Config error"):
+            scrape_avito_with_playwright()
+
+    @patch('vinyl_monitor.load_avito_config')
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_avito_empty_queries(self, mock_playwright, mock_load_config):
+        """Тест скрапинга Avito с пустыми запросами"""
+        from vinyl_monitor import scrape_avito_with_playwright
+        
+        # Мокаем конфигурацию с пустыми запросами
+        mock_load_config.return_value = {
+            "search_queries": [],
+            "base_url": "https://www.avito.ru/sankt_peterburg_i_lo/",
+            "category": "kollektsionirovanie",
+            "enabled": True
+        }
+        
+        result = scrape_avito_with_playwright()
+        assert result == []
+
+    @patch('vinyl_monitor.load_avito_config')
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_avito_disabled(self, mock_playwright, mock_load_config):
+        """Тест скрапинга Avito с отключенным мониторингом"""
+        from vinyl_monitor import scrape_avito_with_playwright
+        
+        # Мокаем отключенную конфигурацию
+        mock_load_config.return_value = {
+            "search_queries": ["test query"],
+            "base_url": "https://www.avito.ru/sankt_peterburg_i_lo/",
+            "category": "kollektsionirovanie",
+            "enabled": False
+        }
+        
+        result = scrape_avito_with_playwright()
+        assert result == []
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
