@@ -1033,9 +1033,13 @@ class TestScrapingFunctions:
     """Тесты для функций скрапинга"""
 
     @patch('vinyl_monitor.sync_playwright')
-    def test_scrape_avito_with_playwright_success(self, mock_playwright):
+    @patch('vinyl_monitor.should_monitor_site')
+    def test_scrape_avito_with_playwright_success(self, mock_should_monitor, mock_playwright):
         """Тест успешного скрапинга Авито"""
         from vinyl_monitor import scrape_avito_with_playwright
+
+        # Мокаем should_monitor_site чтобы разрешить мониторинг
+        mock_should_monitor.return_value = True
 
         # Мокаем Playwright
         mock_browser = MagicMock()
@@ -1074,9 +1078,13 @@ class TestScrapingFunctions:
                 mock_update.assert_called_once_with("avito")
 
     @patch('vinyl_monitor.sync_playwright')
-    def test_scrape_avito_with_playwright_no_queries(self, mock_playwright):
+    @patch('vinyl_monitor.should_monitor_site')
+    def test_scrape_avito_with_playwright_no_queries(self, mock_should_monitor, mock_playwright):
         """Тест скрапинга Авито без запросов"""
         from vinyl_monitor import scrape_avito_with_playwright
+
+        # Мокаем should_monitor_site чтобы разрешить мониторинг
+        mock_should_monitor.return_value = True
 
         # Мокаем конфигурацию без запросов
         with patch('vinyl_monitor.load_avito_config') as mock_config:
@@ -1210,6 +1218,204 @@ class TestScrapingFunctions:
         except Exception:
             # Если функция не обрабатывает исключения, это нормально
             pass
+
+
+class TestAdditionalScrapingTests:
+    """Дополнительные тесты для увеличения покрытия"""
+
+    @patch('vinyl_monitor.sync_playwright')
+    @patch('vinyl_monitor.should_monitor_site')
+    def test_scrape_avito_with_playwright_query_exception(self, mock_should_monitor, mock_playwright):
+        """Тест скрапинга Авито с исключением при поиске запроса"""
+        from vinyl_monitor import scrape_avito_with_playwright
+
+        # Мокаем should_monitor_site чтобы разрешить мониторинг
+        mock_should_monitor.return_value = True
+
+        # Мокаем Playwright
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
+        mock_browser.new_context.return_value = mock_context
+        mock_context.new_page.return_value = mock_page
+        
+        # Мокаем исключение при page.goto
+        mock_page.goto.side_effect = Exception("Network error")
+
+        # Мокаем конфигурацию
+        with patch('vinyl_monitor.load_avito_config') as mock_config:
+            mock_config.return_value = {
+                "search_queries": ["test query"],
+                "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
+                "category": "kollektsionirovanie"
+            }
+            
+            with patch('vinyl_monitor.update_last_check_time') as mock_update:
+                result = scrape_avito_with_playwright()
+                
+                assert len(result) == 0
+                mock_update.assert_called_once_with("avito")
+
+    @patch('vinyl_monitor.sync_playwright')
+    @patch('vinyl_monitor.should_monitor_site')
+    def test_scrape_avito_with_playwright_disabled(self, mock_should_monitor, mock_playwright):
+        """Тест скрапинга Авито когда отключен в конфигурации"""
+        from vinyl_monitor import scrape_avito_with_playwright
+
+        # Мокаем конфигурацию с отключенным Авито
+        with patch('vinyl_monitor.load_avito_config') as mock_config:
+            mock_config.return_value = {
+                "enabled": False,
+                "search_queries": ["test query"],
+                "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
+                "category": "kollektsionirovanie"
+            }
+            
+            result = scrape_avito_with_playwright()
+            
+            assert len(result) == 0
+            # should_monitor_site не должен вызываться если отключен
+            mock_should_monitor.assert_not_called()
+
+    @patch('vinyl_monitor.sync_playwright')
+    @patch('vinyl_monitor.should_monitor_site')
+    def test_scrape_avito_with_playwright_interval_not_passed(self, mock_should_monitor, mock_playwright):
+        """Тест скрапинга Авито когда интервал не прошел"""
+        from vinyl_monitor import scrape_avito_with_playwright
+
+        # Мокаем should_monitor_site чтобы запретить мониторинг
+        mock_should_monitor.return_value = False
+
+        # Мокаем конфигурацию
+        with patch('vinyl_monitor.load_avito_config') as mock_config:
+            mock_config.return_value = {
+                "enabled": True,
+                "search_queries": ["test query"],
+                "base_url": "https://www.avito.ru/sankt_peterburg_i_lo",
+                "category": "kollektsionirovanie"
+            }
+            
+            result = scrape_avito_with_playwright()
+            
+            assert len(result) == 0
+            mock_should_monitor.assert_called_once_with("avito", 6)
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_with_playwright_page_goto_exception(self, mock_playwright):
+        """Тест скрапинга korobkavinyla.ru с исключением при page.goto"""
+        from vinyl_monitor import scrape_with_playwright
+
+        # Мокаем Playwright
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
+        mock_browser.new_context.return_value = mock_context
+        mock_context.new_page.return_value = mock_page
+        
+        # Мокаем исключение при page.goto
+        mock_page.goto.side_effect = Exception("Network error")
+        
+        result = scrape_with_playwright()
+        
+        assert len(result) == 0
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_with_playwright_load_more_button(self, mock_playwright):
+        """Тест скрапинга korobkavinyla.ru с кнопкой Load more"""
+        from vinyl_monitor import scrape_with_playwright
+
+        # Мокаем Playwright
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_btn = MagicMock()
+        
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
+        mock_browser.new_context.return_value = mock_context
+        mock_context.new_page.return_value = mock_page
+        
+        # Мокаем кнопку Load more
+        mock_page.locator.return_value.or_.return_value.or_.return_value = mock_btn
+        mock_btn.count.return_value = 1
+        mock_btn.first = MagicMock()
+        
+        # Мокаем результат извлечения
+        with patch('vinyl_monitor.extract_items_from_dom') as mock_extract:
+            mock_extract.return_value = [
+                {
+                    "id": "https://korobkavinyla.ru/item1",
+                    "url": "https://korobkavinyla.ru/item1",
+                    "title": "Test Item",
+                    "price": "1000 руб"
+                }
+            ]
+            
+            result = scrape_with_playwright()
+            
+            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
+            assert all(item["source"] == "korobkavinyla.ru" for item in result)
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_vinyltap_with_playwright_load_more_button(self, mock_playwright):
+        """Тест скрапинга vinyltap.co.uk с кнопкой Load more"""
+        from vinyl_monitor import scrape_vinyltap_with_playwright
+
+        # Мокаем Playwright
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_btn = MagicMock()
+        
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
+        mock_browser.new_context.return_value = mock_context
+        mock_context.new_page.return_value = mock_page
+        
+        # Мокаем кнопку Load more
+        mock_page.locator.return_value.or_.return_value.or_.return_value = mock_btn
+        mock_btn.count.return_value = 1
+        mock_btn.first = MagicMock()
+        
+        # Мокаем результат извлечения
+        with patch('vinyl_monitor.extract_vinyltap_from_dom') as mock_extract:
+            mock_extract.return_value = [
+                {
+                    "id": "https://vinyltap.co.uk/item1",
+                    "url": "https://vinyltap.co.uk/item1",
+                    "title": "Test Vinyl LP",
+                    "price": "€20.00"
+                }
+            ]
+            
+            result = scrape_vinyltap_with_playwright()
+            
+            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
+            assert all(item["source"] == "vinyltap.co.uk" for item in result)
+
+    @patch('vinyl_monitor.sync_playwright')
+    def test_scrape_vinyltap_with_playwright_extract_exception(self, mock_playwright):
+        """Тест скрапинга vinyltap.co.uk с исключением при извлечении"""
+        from vinyl_monitor import scrape_vinyltap_with_playwright
+
+        # Мокаем Playwright
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        
+        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
+        mock_browser.new_context.return_value = mock_context
+        mock_context.new_page.return_value = mock_page
+        
+        # Мокаем исключение при извлечении
+        with patch('vinyl_monitor.extract_vinyltap_from_dom') as mock_extract:
+            mock_extract.side_effect = Exception("Extraction error")
+            
+            result = scrape_vinyltap_with_playwright()
+            
+            assert len(result) == 0
 
 
 class TestMainFunctionAdvanced:
