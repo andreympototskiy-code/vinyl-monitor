@@ -1,0 +1,7 @@
+playwright
+python-dotenv
+requests
+beautifulsoup4
+pytest
+pytest-cov
+flake8

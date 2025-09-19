@@ -1,0 +1,12 @@
+{
+  "search_queries": [
+    "poets of the fall lp",
+    "harry potter lp",
+    "Снежная королева lp",
+    "beatles vinyl"
+  ],
+  "base_url": "https://www.avito.ru/sankt_peterburg_i_lo/",
+  "category": "kollektsionirovanie",
+  "monitor_interval_hours": 6,
+  "enabled": true
+}
