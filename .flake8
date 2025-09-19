@@ -17,9 +17,6 @@ ignore =
     E302,
     E305,
     E303,
-    E402,
-    F541,
-    C901,
     E231,
     E128
 per-file-ignores =
