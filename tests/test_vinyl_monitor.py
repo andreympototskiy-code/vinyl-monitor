@@ -222,7 +222,10 @@ class TestTelegramIntegration:
 
     def test_send_telegram_success(self):
         """Тест успешной отправки сообщения в Telegram"""
-        with patch('vinyl_monitor.requests.post') as mock_post:
+        with patch('vinyl_monitor.requests.post') as mock_post, \
+             patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token'), \
+             patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat_id'):
+            
             mock_response = MagicMock()
             mock_response.json.return_value = {"ok": True, "result": {"message_id": 123}}
             mock_post.return_value = mock_response
@@ -239,7 +242,10 @@ class TestTelegramIntegration:
 
     def test_send_telegram_failure(self):
         """Тест обработки ошибки при отправке в Telegram"""
-        with patch('vinyl_monitor.requests.post') as mock_post:
+        with patch('vinyl_monitor.requests.post') as mock_post, \
+             patch('vinyl_monitor.TELEGRAM_BOT_TOKEN', 'test_token'), \
+             patch('vinyl_monitor.TELEGRAM_CHAT_ID', 'test_chat_id'):
+            
             mock_post.side_effect = Exception("Network error")
 
             from vinyl_monitor import send_telegram
