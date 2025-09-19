@@ -544,15 +544,26 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
               price = price.replace(/Regular price\s*/gi, '')
                           .replace(/Sale price\s*/gi, '')
                           .replace(/Unit price\s*\/\s*per\s*/gi, '')
-                          .replace(/EUR\s*/gi, '€')
                           .replace(/\s+/g, ' ')
                           .trim();
 
               // Убираем дублирование цены (если есть повторяющиеся части)
-              const priceParts = price.split('€');
-              if (priceParts.length > 2) {
-                // Берем только первую цену
-                price = priceParts[0] + '€' + priceParts[1];
+              // Ищем символы валют: £, €, $, руб
+              const currencySymbols = ['£', '€', '$', 'руб'];
+              let foundCurrency = null;
+              for (const symbol of currencySymbols) {
+                if (price.includes(symbol)) {
+                  foundCurrency = symbol;
+                  break;
+                }
+              }
+
+              if (foundCurrency) {
+                const priceParts = price.split(foundCurrency);
+                if (priceParts.length > 2) {
+                  // Берем только первую цену
+                  price = priceParts[0] + foundCurrency + priceParts[1];
+                }
               }
               break;
             }
