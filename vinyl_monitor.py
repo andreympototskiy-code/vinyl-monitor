@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from html import escape
 from pathlib import Path
@@ -339,7 +340,6 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
         # Убираем лишние пробелы
         normalized_price = ' '.join(normalized_price.split())
         # Убираем дублированные части (если есть повторяющиеся числа)
-        import re
         # Ищем повторяющиеся числа и убираем дубли
         numbers = re.findall(r'\d+\.?\d*', normalized_price)
         if len(numbers) > 1 and len(set(numbers)) == 1:  # Все числа одинаковые
