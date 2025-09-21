@@ -330,7 +330,22 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
         # Создаем ключ содержимого для дополнительной проверки
         title = it.get("title", "").strip().lower()
         price = it.get("price", "").strip()
-        content_key = f"{title}|{price}"
+        
+        # Нормализуем цену для сравнения (убираем валютные символы и дубли)
+        normalized_price = price.lower()
+        # Убираем валютные символы
+        normalized_price = normalized_price.replace('€', '').replace('£', '').replace('$', '').replace('руб', '')
+        normalized_price = normalized_price.replace('eur', '').replace('gbp', '').replace('usd', '')
+        # Убираем лишние пробелы
+        normalized_price = ' '.join(normalized_price.split())
+        # Убираем дублированные части (если есть повторяющиеся числа)
+        import re
+        # Ищем повторяющиеся числа и убираем дубли
+        numbers = re.findall(r'\d+\.?\d*', normalized_price)
+        if len(numbers) > 1 and len(set(numbers)) == 1:  # Все числа одинаковые
+            normalized_price = numbers[0]  # Берем только одно число
+        
+        content_key = f"{title}|{normalized_price}"
 
         # Проверяем дубликаты по URL и содержимому
         is_duplicate = False
@@ -579,7 +594,7 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
                   price = priceParts[0] + foundCurrency + priceParts[1];
                 }
 
-                // Дополнительная проверка на дублирование EUR
+                // Дополнительная проверка на дублирование EUR/GBP
                 if (price.includes('EUR') && price.includes('€')) {
                   // Убираем дублирование EUR после €
                   price = price.replace(/€([^€]*?)EUR\s*€\1EUR/g, '€$1EUR');
@@ -587,6 +602,15 @@ def extract_vinyltap_from_dom(page) -> List[Dict]:
                   if (price.includes('€') && price.split('€').length > 2) {
                     const parts = price.split('€');
                     price = parts[0] + '€' + parts[1];
+                  }
+                }
+                
+                // Аналогично для GBP
+                if (price.includes('GBP') && price.includes('£')) {
+                  price = price.replace(/£([^£]*?)GBP\s*£\1GBP/g, '£$1GBP');
+                  if (price.includes('£') && price.split('£').length > 2) {
+                    const parts = price.split('£');
+                    price = parts[0] + '£' + parts[1];
                   }
                 }
               }
