@@ -11,6 +11,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def validate_url(url: str) -> bool:
+    """Валидация URL"""
+    if not url or not isinstance(url, str):
+        return False
+    
+    # Проверяем длину URL
+    if len(url) > 2048:  # Максимальная длина URL
+        return False
+    
+    # Проверяем протокол
+    if not url.startswith(('http://', 'https://')):
+        return False
+    
+    # Простая проверка формата
+    try:
+        # Убираем протокол и проверяем остальную часть
+        without_protocol = url.split('://', 1)[1]
+        if not without_protocol or '.' not in without_protocol:
+            return False
+        return True
+    except (IndexError, AttributeError):
+        return False
+
+
 USE_PLAYWRIGHT = os.getenv("USE_PLAYWRIGHT", "true").lower() == "true"
 if USE_PLAYWRIGHT:
     from playwright.sync_api import sync_playwright
