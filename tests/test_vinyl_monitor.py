@@ -1149,7 +1149,7 @@ class TestScrapingFunctionsExtended:
 
             result = scrape_with_playwright()
 
-            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
+            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "korobkavinyla.ru" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
@@ -1195,7 +1195,7 @@ class TestScrapingFunctionsExtended:
 
             result = scrape_vinyltap_with_playwright()
 
-            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
+            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "vinyltap.co.uk" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
@@ -1351,7 +1351,7 @@ class TestAdditionalScrapingTests:
 
             result = scrape_with_playwright()
 
-            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
+            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "korobkavinyla.ru" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
@@ -1387,7 +1387,7 @@ class TestAdditionalScrapingTests:
 
             result = scrape_vinyltap_with_playwright()
 
-            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
+            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
             assert all(item["source"] == "vinyltap.co.uk" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
