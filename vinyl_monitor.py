@@ -276,19 +276,19 @@ def send_telegram(text: str) -> None:
         print(f"Failed to send Telegram: {e}")
 
 
-def validate_url(url: str) -> bool:
-    """Валидация URL"""
-    if not url or not isinstance(url, str):
-        return False
-    return url.startswith(('http://', 'https://')) and len(url) < 2048
-
-
+    def validate_url(url: str) -> bool:
+        """Валидация URL"""
+        if not url or not isinstance(url, str):
+            return False
+        return url.startswith(('http://', 'https://')) and len(url) < 2048
+    
+    
 def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
     """Улучшенная дедупликация с нормализацией URL и логированием"""
     seen = set()
     out = []
     duplicates_count = 0
-
+    
     for it in items:
         # Нормализуем URL для более надежной дедупликации
         url = it.get("url", "")
@@ -299,7 +299,7 @@ def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
             normalized_url = normalized_url.rstrip('/')
         else:
             normalized_url = it.get("id", "")
-
+        
         if normalized_url and normalized_url not in seen:
             seen.add(normalized_url)
             # Обновляем ID на нормализованный URL
@@ -308,10 +308,10 @@ def dedupe_keep_order(items: List[Dict]) -> List[Dict]:
         else:
             duplicates_count += 1
             print(f"Дубликат найден: {normalized_url}")
-
+    
     if duplicates_count > 0:
         print(f"Найдено {duplicates_count} дубликатов, удалено")
-
+    
     return out
 
 
@@ -321,7 +321,7 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
     seen_content = set()
     out = []
     duplicates_count = 0
-
+    
     for it in items:
         # Нормализуем URL
         url = it.get("url", "")
@@ -329,7 +329,7 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
             normalized_url = url.split('?')[0].split('#')[0].rstrip('/')
         else:
             normalized_url = it.get("id", "")
-
+        
         # Создаем ключ содержимого для дополнительной проверки
         title = it.get("title", "").strip().lower()
         price = it.get("price", "").strip()
@@ -348,17 +348,17 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
             normalized_price = numbers[0]  # Берем только одно число
         
         content_key = f"{title}|{normalized_price}"
-
+        
         # Проверяем дубликаты по URL и содержимому
         is_duplicate = False
-
+        
         if normalized_url in seen_urls:
             is_duplicate = True
             print(f"Дубликат по URL: {normalized_url}")
         elif content_key in seen_content and content_key != "|":
             is_duplicate = True
             print(f"Дубликат по содержимому: {title}")
-
+        
         if not is_duplicate:
             seen_urls.add(normalized_url)
             seen_content.add(content_key)
@@ -366,10 +366,10 @@ def advanced_deduplication(items: List[Dict]) -> List[Dict]:
             out.append(it)
         else:
             duplicates_count += 1
-
+    
     if duplicates_count > 0:
         print(f"Найдено {duplicates_count} дубликатов (продвинутая проверка), удалено")
-
+    
     return out
 
 
@@ -669,29 +669,28 @@ def scrape_with_playwright() -> List[Dict]:
                         else:
                             print(f"    Не удалось загрузить {section_name} после 3 попыток")
                             continue
-
-                time.sleep(1.2)
-
-                clicks = 0
-                while clicks < LOAD_MORE_MAX_CLICKS:
-                    btn = page.locator("text=Load more").or_(page.locator("text=Загрузить ещё")).or_(page.locator("text=Показать ещё"))
-                    if btn.count() == 0:
-                        break
-                    try:
-                        btn.first.scroll_into_view_if_needed()
-                        btn.first.click()
-                        clicks += 1
-                        page.wait_for_timeout(LOAD_MORE_WAIT_MS)
-                    except Exception:
-                        break
-
-                items = extract_items_from_dom(page)
-                print(f"    Найдено: {len(items)} позиций")
-                all_items.extend(items)
-
             except Exception as e:
-                print(f"    Ошибка при сканировании {section_name}: {e}")
+                print(f"    Ошибка при обработке {section_name}: {e}")
                 continue
+
+        time.sleep(1.2)
+
+        clicks = 0
+        while clicks < LOAD_MORE_MAX_CLICKS:
+            btn = page.locator("text=Load more").or_(page.locator("text=Загрузить ещё")).or_(page.locator("text=Показать ещё"))
+            if btn.count() == 0:
+                break
+            try:
+                btn.first.scroll_into_view_if_needed()
+                btn.first.click()
+                clicks += 1
+                page.wait_for_timeout(LOAD_MORE_WAIT_MS)
+            except Exception:
+                break
+
+            items = extract_items_from_dom(page)
+            print(f"    Найдено: {len(items)} позиций")
+            all_items.extend(items)
 
         browser.close()
 
@@ -741,7 +740,7 @@ def scrape_plastinka_with_playwright() -> List[Dict]:
                     if attempt < 2:
                         time.sleep(2)
                     else:
-                        print(f"    Не удалось загрузить plastinka.com после 3 попыток")
+                        print("    Не удалось загрузить plastinka.com после 3 попыток")
                         continue
 
             time.sleep(1.2)
@@ -947,7 +946,7 @@ def scrape_vinyltap_with_playwright() -> List[Dict]:
         for url in VINYLTAP_URLS:
             try:
                 print(f"  Сканирование: {url}")
-
+                
                 # Пытаемся загрузить страницу с повторными попытками
                 for attempt in range(3):
                     try:
@@ -960,7 +959,7 @@ def scrape_vinyltap_with_playwright() -> List[Dict]:
                         else:
                             print(f"    Не удалось загрузить {url} после 3 попыток")
                             continue
-
+                
                 time.sleep(1.2)
 
                 # Попробуем нажать кнопку подгрузки, если есть
@@ -986,8 +985,8 @@ def scrape_vinyltap_with_playwright() -> List[Dict]:
                 print(f"    Ошибка при сканировании {url}: {e}")
                 continue
 
-        browser.close()
-
+            browser.close()
+        
         # Добавляем источник
         for item in all_items:
             item["source"] = "vinyltap.co.uk"
@@ -1012,7 +1011,7 @@ def main():
         else:
             print("⏰ korobkavinyla.ru: пропуск (интервал 24 часа)")
             korobka_items = []
-
+        
         # Проверяем, нужно ли мониторить vinyltap.co.uk
         if should_monitor_site("vinyltap", VINYLTAP_MONITOR_INTERVAL_HOURS):
             print("🔍 Сканирование vinyltap.co.uk...")
@@ -1040,7 +1039,7 @@ def main():
 
     current_ids = {it["id"] for it in items}
     new_ids = [it for it in items if it["id"] not in known]
-
+    
     print(f"🆕 Найдено {len(new_ids)} новых позиций из {len(items)} общих")
 
     if new_ids:
@@ -1110,7 +1109,7 @@ def main():
         print(f"📤 Отправка {len(new_ids)} новых позиций в Telegram...")
         for chunk in chunk_messages(message):
             send_telegram(chunk)
-
+        
         # Обновляем состояние только с новыми ID
         updated_known = known.union(current_ids)
         save_state(updated_known, new_ids)

@@ -33,7 +33,7 @@ def should_monitor_site(site_name: str, interval_hours: int) -> bool:
         with open(last_check_file, "r", encoding="utf-8") as f:
             last_check_str = f.read().strip()
         
-        from datetime import datetime, timedelta
+        from datetime import datetime
         last_check = datetime.fromisoformat(last_check_str)
         now = datetime.now()
         
@@ -211,7 +211,7 @@ def scrape_plastinka_with_playwright() -> List[Dict]:
                     if attempt < 2:
                         time.sleep(2)
                     else:
-                        print(f"    Не удалось загрузить plastinka.com после 3 попыток")
+                        print("    Не удалось загрузить plastinka.com после 3 попыток")
                         continue
 
             time.sleep(1.2)
@@ -286,7 +286,7 @@ def scrape_vinylfamily_with_playwright() -> List[Dict]:
                     if attempt < 2:
                         time.sleep(2)
                     else:
-                        print(f"    Не удалось загрузить vinylfamily.shop после 3 попыток")
+                        print("    Не удалось загрузить vinylfamily.shop после 3 попыток")
                         continue
 
             time.sleep(1.2)
@@ -331,7 +331,7 @@ if __name__ == "__main__":
     print(f"Найдено позиций: {len(plastinka_items)}")
     if plastinka_items:
         for i, item in enumerate(plastinka_items[:3]):
-            print(f"  {i+1}. {item.get('title', 'Без названия')} - {item.get('price', 'Без цены')}")
+            print(f"  {i + 1}. {item.get('title', 'Без названия')} - {item.get('price', 'Без цены')}")
     
     print()
     
@@ -341,4 +341,4 @@ if __name__ == "__main__":
     print(f"Найдено позиций: {len(vinylfamily_items)}")
     if vinylfamily_items:
         for i, item in enumerate(vinylfamily_items[:3]):
-            print(f"  {i+1}. {item.get('title', 'Без названия')} - {item.get('price', 'Без цены')}")
+            print(f"  {i + 1}. {item.get('title', 'Без названия')} - {item.get('price', 'Без цены')}")
