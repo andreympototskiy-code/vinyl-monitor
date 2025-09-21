@@ -186,3 +186,5 @@ MIT License
 3. Проверьте доступность сайтов
 4. Создайте Issue в репозитории
 # Vinyl Monitor - Automated Testing
+
+

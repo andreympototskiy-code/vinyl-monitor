@@ -18,6 +18,7 @@ if USE_PLAYWRIGHT:
 CATALOG_URL = os.getenv("CATALOG_URL", "https://korobkavinyla.ru/catalog")
 KOROBKA_SALE_URL = os.getenv("KOROBKA_SALE_URL", "https://korobkavinyla.ru/catalog?tfc_sort%5B771567999%5D=created:desc&tfc_quantity%5B771567999%5D=y&tfc_storepartuid%5B771567999%5D=Sale&tfc_div=:::")
 VINYLTAP_URLS = os.getenv("VINYLTAP_URLS", "https://vinyltap.co.uk/collections/new-releases,https://vinyltap.co.uk/collections/upcoming-releases").split(",")
+PLASTINKA_URL = os.getenv("PLASTINKA_URL", "https://plastinka.com/lp")
 STATE_PATH = Path(os.getenv("STATE_PATH", "./state.json")).expanduser().resolve()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -26,9 +27,10 @@ LOAD_MORE_MAX_CLICKS = 20
 LOAD_MORE_WAIT_MS = 1200
 
 # Интервалы мониторинга в часах
-KOROBKA_MONITOR_INTERVAL_HOURS = int(os.getenv("KOROBKA_MONITOR_INTERVAL_HOURS", "24"))  # 24 часа для korobkavinyla.ru
+KOROBKA_MONITOR_INTERVAL_HOURS = int(os.getenv("KOROBKA_MONITOR_INTERVAL_HOURS", "3"))  # 3 часа для korobkavinyla.ru
 VINYLTAP_MONITOR_INTERVAL_HOURS = int(os.getenv("VINYLTAP_MONITOR_INTERVAL_HOURS", "3"))  # 3 часа для vinyltap.co.uk
 AVITO_MONITOR_INTERVAL_HOURS = int(os.getenv("AVITO_MONITOR_INTERVAL_HOURS", "6"))  # 6 часов для Авито
+PLASTINKA_MONITOR_INTERVAL_HOURS = int(os.getenv("PLASTINKA_MONITOR_INTERVAL_HOURS", "6"))  # 6 часов для plastinka.com
 
 
 def load_state() -> Set[str]:
@@ -700,6 +702,200 @@ def scrape_with_playwright() -> List[Dict]:
         return all_items
 
 
+def scrape_plastinka_with_playwright() -> List[Dict]:
+    """Сканировать plastinka.com на предмет виниловых пластинок"""
+    if not should_monitor_site("plastinka", PLASTINKA_MONITOR_INTERVAL_HOURS):
+        print("⏰ plastinka.com: пропуск (интервал 6 часов)")
+        return []
+
+    print("🔍 Сканирование plastinka.com...")
+    all_items = []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            locale="ru-RU",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            extra_http_headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "DNT": "1",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+            }
+        )
+        page = context.new_page()
+        page.set_default_timeout(REQUEST_TIMEOUT_SEC * 1000)
+
+        try:
+            print(f"  Сканирование: {PLASTINKA_URL}")
+
+            # Пытаемся загрузить страницу с повторными попытками
+            for attempt in range(3):
+                try:
+                    page.goto(PLASTINKA_URL, wait_until="load", timeout=REQUEST_TIMEOUT_SEC * 1000)
+                    break
+                except Exception as e:
+                    print(f"    Попытка {attempt + 1} загрузки неудачна: {e}")
+                    if attempt < 2:
+                        time.sleep(2)
+                    else:
+                        print(f"    Не удалось загрузить plastinka.com после 3 попыток")
+                        continue
+
+            time.sleep(1.2)
+
+            # Попробуем нажать кнопку подгрузки, если есть
+            try:
+                for _ in range(3):
+                    btn = page.locator("text=Load more").or_(page.locator("text=Загрузить ещё")).or_(page.locator("text=Показать ещё"))
+                    if btn.count() == 0:
+                        break
+                    btn.first.scroll_into_view_if_needed()
+                    btn.first.click()
+                    page.wait_for_timeout(LOAD_MORE_WAIT_MS)
+            except Exception as e:
+                print(f"    Ошибка при нажатии кнопки 'Load more': {e}")
+
+            try:
+                items = extract_plastinka_from_dom(page)
+                print(f"    Найдено: {len(items)} позиций")
+                all_items.extend(items)
+            except Exception as e:
+                print(f"    Ошибка при извлечении данных: {e}")
+
+        except Exception as e:
+            print(f"    Ошибка при сканировании plastinka.com: {e}")
+
+        browser.close()
+
+        # Добавляем источник
+        for item in all_items:
+            item["source"] = "plastinka.com"
+
+        return all_items
+
+
+def extract_plastinka_from_dom(page) -> List[Dict]:
+    """Извлекает данные о товарах с plastinka.com"""
+    js = r"""
+    () => {
+      const anchors = Array.from(document.querySelectorAll('a'))
+        .filter(a => a.href && (a.href.includes('/product/') || a.href.includes('/lp/')) && a.textContent.trim().length > 0);
+
+      const items = [];
+      const seen = new Set();
+
+      for (const a of anchors) {
+        // Нормализуем URL: убираем параметры запроса и якоря, убираем trailing slash
+        const url = a.href.split('?')[0].split('#')[0].replace(/\/$/, '');
+        if (seen.has(url)) continue;
+        seen.add(url);
+
+        let title = a.textContent.trim();
+        let el = a;
+        
+        // Сначала пытаемся найти полное название в родительских элементах
+        for (let i = 0; i < 8 && el; i++) {
+          if (el.querySelector) {
+            // Ищем различные селекторы для названий
+            const titleSelectors = [
+              '.t-store__prod-snippet__title',
+              '.t-store__prod-snippet__title a',
+              '.t-store__prod-snippet__title span',
+              '.t-store__prod-snippet__title div',
+              'h1,h2,h3,h4,h5,h6',
+              '.title,.product-title,[class*="title"]',
+              '.t-store__prod-snippet__title-wrapper',
+              '.t-store__prod-snippet__title-wrapper a',
+              '.t-store__prod-snippet__title-wrapper span'
+            ];
+            
+            for (const selector of titleSelectors) {
+              const t = el.querySelector(selector);
+              if (t && t.textContent && t.textContent.trim().length > 3) {
+                const foundTitle = t.textContent.trim();
+                // Проверяем, что это не просто год или короткий текст
+                if (foundTitle.length > title.length && !foundTitle.match(/^\\d{2,4}$/)) {
+                  title = foundTitle;
+                  break;
+                }
+              }
+            }
+            
+            // Также проверяем атрибуты title и alt
+            if (el.title && el.title.trim().length > title.length) {
+              title = el.title.trim();
+            }
+            if (el.alt && el.alt.trim().length > title.length) {
+              title = el.alt.trim();
+            }
+          }
+          el = el.parentElement;
+        }
+        
+        // Если название все еще короткое, пытаемся извлечь из URL
+        if (title.length < 10 && a.href) {
+          const urlParts = a.href.split('/');
+          const lastPart = urlParts[urlParts.length - 1];
+          if (lastPart && lastPart.includes('-')) {
+            const urlTitle = lastPart.replace(/-/g, ' ').replace(/\\d+/g, '').trim();
+            if (urlTitle.length > title.length) {
+              title = urlTitle;
+            }
+          }
+        }
+
+        let price = '';
+        let originalPrice = '';
+        let discountPrice = '';
+        el = a;
+        for (let i = 0; i < 5 && el; i++) {
+          if (el.querySelector) {
+            // Ищем цену со скидкой
+            const discountEl = el.querySelector('.t-store__prod-snippet__price, .price, .money, [class*="price"]');
+            if (discountEl && discountEl.textContent) {
+              const priceText = discountEl.textContent.trim();
+              
+              // Проверяем, есть ли две цены (оригинальная и со скидкой)
+              const priceMatch = priceText.match(/(\d+[\s,]*\d*)\s*руб\.?\s*(\d+[\s,]*\d*)\s*руб\.?/);
+              if (priceMatch) {
+                originalPrice = priceMatch[1].replace(/\s/g, '') + ' руб.';
+                discountPrice = priceMatch[2].replace(/\s/g, '') + ' руб.';
+                price = `${originalPrice} → ${discountPrice}`;
+              } else {
+                price = priceText.replace(/\s+/g, ' ');
+              }
+              break;
+            }
+          }
+          el = el.parentElement;
+        }
+
+        // Фильтруем элементы меню и навигации
+        if (title && title.length > 3 && 
+            !title.toLowerCase().includes('меню') && 
+            !title.toLowerCase().includes('каталог') &&
+            !title.toLowerCase().includes('главная') &&
+            !title.toLowerCase().includes('контакты') &&
+            !title.toLowerCase().includes('style/') &&
+            !url.includes('/style/')) {
+          items.push({
+            id: url,
+            url: url,
+            title: title,
+            price: price
+          });
+        }
+      }
+
+      return items;
+    }
+    """
+    return page.evaluate(js)
+
+
 def scrape_vinyltap_with_playwright() -> List[Dict]:
     all_items = []
 
@@ -803,6 +999,10 @@ def main():
         # Проверяем, нужно ли мониторить Авито
         avito_items = scrape_avito_with_playwright()
         items.extend(avito_items)
+
+        # Проверяем, нужно ли мониторить plastinka.com
+        plastinka_items = scrape_plastinka_with_playwright()
+        items.extend(plastinka_items)
     else:
         items = []
 
@@ -858,6 +1058,25 @@ def main():
                 query_info = f" (поиск: {query})" if query else ''
                 safe_title = escape(title)
                 lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price}{query_info}")
+
+        if plastinka_items:
+            lines.append("💿 plastinka.com:")
+            for it in plastinka_items:
+                title = it.get('title', '(без названия)')
+                price = it.get('price', '')
+                
+                # Форматируем цену для скидок
+                if price and '→' in price:
+                    # Цена со скидкой: показываем с эмодзи
+                    price_str = f" — 💰 {price}"
+                elif price:
+                    price_str = f" — {price}"
+                else:
+                    price_str = ''
+                
+                url = it['url']
+                safe_title = escape(title)
+                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price_str}")
 
         message = "\n".join(lines)
         print(f"📤 Отправка {len(new_ids)} новых позиций в Telegram...")
