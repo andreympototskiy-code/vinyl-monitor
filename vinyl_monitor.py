@@ -796,10 +796,11 @@ def extract_plastinka_from_dom(page) -> List[Dict]:
         let title = a.textContent.trim();
         let el = a;
         
-        // Сначала пытаемся найти полное название в родительских элементах
-        for (let i = 0; i < 8 && el; i++) {
-          if (el.querySelector) {
-            // Ищем различные селекторы для названий
+        // Ищем название в самом элементе и его ближайших родителях
+        let currentEl = a;
+        for (let i = 0; i < 3 && currentEl; i++) {
+          if (currentEl.querySelector) {
+            // Ищем различные селекторы для названий в текущем элементе
             const titleSelectors = [
               '.t-store__prod-snippet__title',
               '.t-store__prod-snippet__title a',
@@ -813,7 +814,7 @@ def extract_plastinka_from_dom(page) -> List[Dict]:
             ];
             
             for (const selector of titleSelectors) {
-              const t = el.querySelector(selector);
+              const t = currentEl.querySelector(selector);
               if (t && t.textContent && t.textContent.trim().length > 3) {
                 const foundTitle = t.textContent.trim();
                 // Проверяем, что это не просто год или короткий текст
@@ -825,14 +826,14 @@ def extract_plastinka_from_dom(page) -> List[Dict]:
             }
             
             // Также проверяем атрибуты title и alt
-            if (el.title && el.title.trim().length > title.length) {
-              title = el.title.trim();
+            if (currentEl.title && currentEl.title.trim().length > title.length) {
+              title = currentEl.title.trim();
             }
-            if (el.alt && el.alt.trim().length > title.length) {
-              title = el.alt.trim();
+            if (currentEl.alt && currentEl.alt.trim().length > title.length) {
+              title = currentEl.alt.trim();
             }
           }
-          el = el.parentElement;
+          currentEl = currentEl.parentElement;
         }
         
         // Если название все еще короткое, пытаемся извлечь из URL
@@ -843,6 +844,27 @@ def extract_plastinka_from_dom(page) -> List[Dict]:
             const urlTitle = lastPart.replace(/-/g, ' ').replace(/\\d+/g, '').trim();
             if (urlTitle.length > title.length) {
               title = urlTitle;
+            }
+          }
+        }
+        
+        // Дополнительная проверка: если название слишком общее, пытаемся найти уникальные элементы
+        if (title.length < 15 || title.includes('Boccherini/Bach')) {
+          // Ищем уникальные элементы в соседних элементах
+          const parent = a.parentElement;
+          if (parent) {
+            const siblings = Array.from(parent.children);
+            for (const sibling of siblings) {
+              if (sibling !== a && sibling.textContent) {
+                const siblingText = sibling.textContent.trim();
+                if (siblingText.length > title.length && 
+                    !siblingText.toLowerCase().includes('руб') &&
+                    !siblingText.toLowerCase().includes('купить') &&
+                    !siblingText.toLowerCase().includes('в корзину')) {
+                  title = siblingText;
+                  break;
+                }
+              }
             }
           }
         }
@@ -880,7 +902,13 @@ def extract_plastinka_from_dom(page) -> List[Dict]:
             !title.toLowerCase().includes('главная') &&
             !title.toLowerCase().includes('контакты') &&
             !title.toLowerCase().includes('style/') &&
-            !url.includes('/style/')) {
+            !title.toLowerCase().includes('интересный выбор') &&
+            !title.toLowerCase().includes('новые поступления') &&
+            !title.toLowerCase().includes('оригинальный винил') &&
+            !title.toLowerCase().includes('подарочные издания') &&
+            !title.toLowerCase().includes('record store day') &&
+            !url.includes('/style/') &&
+            url.includes('/item/')) {  // Только товары
           items.push({
             id: url,
             url: url,
