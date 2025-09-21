@@ -7,6 +7,7 @@ import os
 import time
 from pathlib import Path
 from typing import Dict, List
+
 from playwright.sync_api import sync_playwright
 
 # Новые URL

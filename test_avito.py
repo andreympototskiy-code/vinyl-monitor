@@ -3,9 +3,11 @@
 Тестовый скрипт для проверки доступности Авито с новым User-Agent
 """
 
-import requests
 import time
+
+import requests
 from playwright.sync_api import sync_playwright
+
 
 def test_avito_with_requests():
     """Тестируем Авито через requests"""
