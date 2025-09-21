@@ -1149,7 +1149,7 @@ class TestScrapingFunctionsExtended:
 
             result = scrape_with_playwright()
 
-            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
+            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
             assert all(item["source"] == "korobkavinyla.ru" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
@@ -1195,7 +1195,7 @@ class TestScrapingFunctionsExtended:
 
             result = scrape_vinyltap_with_playwright()
 
-            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
+            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
             assert all(item["source"] == "vinyltap.co.uk" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
@@ -1351,7 +1351,7 @@ class TestAdditionalScrapingTests:
 
             result = scrape_with_playwright()
 
-            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
+            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
             assert all(item["source"] == "korobkavinyla.ru" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
@@ -1387,7 +1387,7 @@ class TestAdditionalScrapingTests:
 
             result = scrape_vinyltap_with_playwright()
 
-            assert len(result) == 2  # Два URL, каждый возвращает 1 элемент
+            assert len(result) == 20  # Два URL, каждый возвращает 10 элементов (1 элемент * 10 кликов)
             assert all(item["source"] == "vinyltap.co.uk" for item in result)
 
     @patch('vinyl_monitor.sync_playwright')
@@ -2929,12 +2929,13 @@ class TestCompleteCoverage:
     @patch('vinyl_monitor.scrape_with_playwright')
     @patch('vinyl_monitor.scrape_vinyltap_with_playwright')
     @patch('vinyl_monitor.scrape_avito_with_playwright')
+    @patch('vinyl_monitor.scrape_plastinka_with_playwright')
     @patch('vinyl_monitor.load_state')
     @patch('vinyl_monitor.save_state')
     @patch('vinyl_monitor.send_telegram')
     def test_main_no_new_items(self, mock_send_telegram, mock_save_state, mock_load_state,
-                             mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
-                             mock_should_monitor):
+                               mock_scrape_plastinka, mock_scrape_avito, mock_scrape_vinyltap, mock_scrape_korobka,
+                               mock_should_monitor):
         """Тест main функции без новых элементов (строки 712-714)"""
         from vinyl_monitor import main
 
@@ -2944,6 +2945,7 @@ class TestCompleteCoverage:
         mock_scrape_korobka.return_value = [{"id": "existing_id", "title": "Existing", "price": "100"}]
         mock_scrape_vinyltap.return_value = []
         mock_scrape_avito.return_value = []
+        mock_scrape_plastinka.return_value = []
 
         main()
 
