@@ -167,14 +167,18 @@ def scrape_avito_with_playwright() -> List[Dict]:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             locale="ru-RU",
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             extra_http_headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
                 "Accept-Encoding": "gzip, deflate, br",
                 "DNT": "1",
                 "Connection": "keep-alive",
                 "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Cache-Control": "max-age=0",
             }
         )
         page = context.new_page()
@@ -229,6 +233,11 @@ def scrape_avito_with_playwright() -> List[Dict]:
                 query_items = page.evaluate(js, query)
                 items.extend(query_items)
                 print(f"    Найдено: {len(query_items)} позиций")
+                
+                # Задержка 60 секунд между запросами для избежания блокировки
+                if len(search_queries) > 1:  # Только если запросов больше одного
+                    print("    ⏳ Ожидание 60 секунд перед следующим запросом...")
+                    time.sleep(60)
 
             except Exception as e:
                 print(f"    Ошибка при поиске '{query}': {e}")
