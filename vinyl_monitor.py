@@ -893,12 +893,14 @@ def extract_plastinka_from_dom(page) -> List[Dict]:
         }
         
         // Если название все еще короткое, пытаемся извлечь из URL
-        if (title.length < 10 && a.href) {
+        if (title.length < 20 && a.href) {
           const urlParts = a.href.split('/');
           const lastPart = urlParts[urlParts.length - 1];
           if (lastPart && lastPart.includes('-')) {
-            const urlTitle = lastPart.replace(/-/g, ' ').replace(/\\d+/g, '').trim();
-            if (urlTitle.length > title.length) {
+            // Убираем ID в начале и преобразуем дефисы в пробелы
+            const urlTitle = lastPart.replace(/^\\d+-/, '').replace(/-/g, ' ').trim();
+            // Используем URL только если он значительно длиннее и не содержит ID
+            if (urlTitle.length > title.length + 5 && !urlTitle.match(/^\\d+/)) {
               title = urlTitle;
             }
           }
@@ -921,6 +923,51 @@ def extract_plastinka_from_dom(page) -> List[Dict]:
                   break;
                 }
               }
+            }
+          }
+        }
+        
+        // Улучшенная логика извлечения полных названий для plastinka.com
+        if (title.length < 50) {
+          // Ищем главный контейнер товара (products-grid-item)
+          const mainContainer = a.closest('.products-grid-item');
+          if (mainContainer) {
+            let artist = '';
+            let album = '';
+            let label = '';
+            
+            // Извлекаем исполнителя
+            const artistEl = mainContainer.querySelector('.products-grid-item__artist a');
+            if (artistEl && artistEl.textContent) {
+              artist = artistEl.textContent.trim();
+            }
+            
+            // Извлекаем название альбома
+            const albumEl = mainContainer.querySelector('.products-grid-item__title a');
+            if (albumEl && albumEl.textContent) {
+              album = albumEl.textContent.trim();
+            }
+            
+            // Извлекаем лейбл (первая строка в params)
+            const paramsEl = mainContainer.querySelector('.products-grid-item__params a');
+            if (paramsEl && paramsEl.textContent) {
+              const paramsText = paramsEl.textContent.trim();
+              // Берем только первую строку (лейбл)
+              label = paramsText.split('\\n')[0].trim();
+            }
+            
+            // Собираем полное название
+            let fullTitle = '';
+            if (artist && album) {
+              fullTitle = artist + ' — ' + album;
+              if (label && label !== artist && label !== album) {
+                fullTitle += ' — ' + label;
+              }
+            }
+            
+            // Если нашли более полное название, используем его
+            if (fullTitle && fullTitle.length > title.length) {
+              title = fullTitle;
             }
           }
         }
