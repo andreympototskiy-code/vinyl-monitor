@@ -254,6 +254,35 @@ def scrape_avito_with_playwright() -> List[Dict]:
     return items
 
 
+def clean_duplicates_in_state(data: dict) -> dict:
+    """Очищает дубли в состоянии по названиям товаров"""
+    known_items = data.get("known_items", {})
+    if not known_items:
+        return data
+    
+    # Создаем новый словарь без дублей
+    cleaned_items = {}
+    seen_titles = set()
+    removed_count = 0
+    
+    for url, item in known_items.items():
+        title = item.get("title", "")
+        
+        if title not in seen_titles:
+            seen_titles.add(title)
+            cleaned_items[url] = item
+        else:
+            removed_count += 1
+    
+    if removed_count > 0:
+        print(f"🧹 Удалено {removed_count} дублей из состояния")
+        data["known_items"] = cleaned_items
+        from datetime import datetime
+        data["last_cleanup"] = datetime.now().isoformat()
+    
+    return data
+
+
 def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -285,9 +314,13 @@ def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
                     "source": item.get("source", "")
                 }
 
+    # Очищаем дубли перед сохранением
+    data_to_save = {"known_items": existing_data}
+    data_to_save = clean_duplicates_in_state(data_to_save)
+    
     # Сохраняем в новом формате
     with open(STATE_PATH, "w", encoding="utf-8") as f:
-        json.dump({"known_items": existing_data}, f, ensure_ascii=False, indent=2)
+        json.dump(data_to_save, f, ensure_ascii=False, indent=2)
 
 
 def send_telegram(text: str) -> None:
