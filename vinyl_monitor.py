@@ -520,6 +520,38 @@ def validate_message_format(message: str) -> bool:
     return True
 
 
+def format_item_message(item: Dict, source: str) -> str:
+    """Унифицированное форматирование сообщения о товаре"""
+    title = item.get('title', '(без названия)')
+    price = item.get('price', '')
+    url = item['url']
+    safe_title = escape(title)
+    
+    # Форматируем цену в зависимости от источника
+    if source == "vinyltap.co.uk":
+        # Исправляем валюту для vinyltap.co.uk (должна быть £, а не €)
+        if price and '€' in price:
+            price = price.replace('€', '£')
+            price = price.replace('EUR', 'GBP')
+        price_str = f" — {price}" if price else ''
+    elif source == "plastinka.com":
+        # Форматируем цену для скидок
+        if price and '→' in price:
+            price_str = f" — 💰 {price}"
+        else:
+            price_str = f" — {price}" if price else ''
+    elif source == "avito.ru":
+        # Добавляем информацию о поиске для Авито
+        query = item.get('query', '')
+        query_info = f" (поиск: {query})" if query else ''
+        price_str = f" — {price}{query_info}" if price else query_info
+    else:
+        # Стандартный формат для остальных сайтов
+        price_str = f" — {price}" if price else ''
+    
+    return f"- <a href=\"{url}\">{safe_title}</a>{price_str}"
+
+
 def chunk_messages(text: str, limit: int = 4096) -> List[str]:
     if len(text) <= limit:
         return [text]
@@ -1076,59 +1108,22 @@ def main():
         if kor_items:
             lines.append("🎵 korobkavinyla.ru:")
             for it in kor_items:
-                title = it.get('title', '(без названия)')
-                price = f" — {it['price']}" if it.get('price') else ''
-                url = it['url']
-                safe_title = escape(title)
-                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price}")
+                lines.append(format_item_message(it, "korobkavinyla.ru"))
 
         if tap_items:
             lines.append("🎵 vinyltap.co.uk:")
             for it in tap_items:
-                title = it.get('title', '(без названия)')
-                price = it.get('price', '')
-
-                # Исправляем валюту для vinyltap.co.uk (должна быть £, а не €)
-                if price and '€' in price:
-                    # Заменяем € на £ для vinyltap.co.uk
-                    price = price.replace('€', '£')
-                    # Убираем EUR и заменяем на GBP
-                    price = price.replace('EUR', 'GBP')
-
-                price_str = f" — {price}" if price else ''
-                url = it['url']
-                safe_title = escape(title)
-                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price_str}")
+                lines.append(format_item_message(it, "vinyltap.co.uk"))
 
         if avito_items:
             lines.append("🏠 Авито:")
             for it in avito_items:
-                title = it.get('title', '(без названия)')
-                price = f" — {it['price']}" if it.get('price') else ''
-                url = it['url']
-                query = it.get('query', '')
-                query_info = f" (поиск: {query})" if query else ''
-                safe_title = escape(title)
-                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price}{query_info}")
+                lines.append(format_item_message(it, "avito.ru"))
 
         if plastinka_items:
             lines.append("💿 plastinka.com:")
             for it in plastinka_items:
-                title = it.get('title', '(без названия)')
-                price = it.get('price', '')
-                
-                # Форматируем цену для скидок
-                if price and '→' in price:
-                    # Цена со скидкой: показываем с эмодзи
-                    price_str = f" — 💰 {price}"
-                elif price:
-                    price_str = f" — {price}"
-                else:
-                    price_str = ''
-                
-                url = it['url']
-                safe_title = escape(title)
-                lines.append(f"- <a href=\"{url}\">{safe_title}</a>{price_str}")
+                lines.append(format_item_message(it, "plastinka.com"))
 
         message = "\n".join(lines)
         print(f"📤 Отправка {len(new_ids)} новых позиций в Telegram...")
