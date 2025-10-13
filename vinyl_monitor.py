@@ -69,7 +69,7 @@ def load_state() -> Set[str]:
                 return set(data["known_ids"])
             elif "known_items" in data and isinstance(data["known_items"], dict):
                 # Новый формат - объект с timestamp
-                return set(data["known_items"].keys())
+                return {normalize_url(item_id) for item_id in data["known_items"].keys()}
             else:
                 return set()
         except Exception:
@@ -1195,8 +1195,8 @@ def main():
     items = advanced_deduplication(items)
     print(f"✅ После дедупликации: {len(items)} уникальных позиций")
 
-    current_ids = {it["id"] for it in items}
-    new_ids = [it for it in items if it["id"] not in known]
+    current_ids = {normalize_url(it["id"]) for it in items}
+    new_ids = [it for it in items if normalize_url(it["id"]) not in known]
     
     print(f"🆕 Найдено {len(new_ids)} новых позиций из {len(items)} общих")
 
