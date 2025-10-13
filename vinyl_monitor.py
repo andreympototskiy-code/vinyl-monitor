@@ -308,7 +308,8 @@ def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
         for item in new_items:
             item_id = item.get("id", "")
             if item_id:
-                existing_data[item_id] = {
+                normalized_id = normalize_url(item_id)
+                existing_data[normalized_id] = {
                     "added_at": current_time,
                     "title": item.get("title", ""),
                     "source": item.get("source", "")
