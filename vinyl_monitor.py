@@ -283,6 +283,17 @@ def clean_duplicates_in_state(data: dict) -> dict:
     return data
 
 
+def normalize_url(url: str) -> str:
+    """Нормализует URL, убирая параметры запроса и якоря"""
+    if not url:
+        return url
+    
+    normalized = url.split('?')[0].split('#')[0]
+    normalized = normalized.rstrip('/')
+    
+    return normalized
+
+
 def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
