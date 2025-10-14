@@ -59,6 +59,19 @@ PLASTINKA_MONITOR_INTERVAL_HOURS = int(os.getenv("PLASTINKA_MONITOR_INTERVAL_HOU
 
 
 def load_state() -> Set[str]:
+    """Загружает состояние из S3 или локального файла"""
+    try:
+        # Сначала пробуем загрузить из S3
+        from s3_storage import S3Storage
+        s3 = S3Storage()
+        known_items = s3.load_known_items()
+        if known_items:
+            print(f"📚 Загружено {len(known_items)} известных позиций из S3")
+            return known_items
+    except Exception as e:
+        print(f"⚠️ Ошибка загрузки из S3: {e}, пробуем локальный файл")
+    
+    # Fallback на локальный файл
     if STATE_PATH.exists():
         try:
             with open(STATE_PATH, "r", encoding="utf-8") as f:
@@ -66,10 +79,14 @@ def load_state() -> Set[str]:
             # Поддержка старого формата (массив ID) и нового формата (объект с timestamp)
             if "known_ids" in data and isinstance(data["known_ids"], list):
                 # Старый формат - массив строк
-                return set(data["known_ids"])
+                result = set(data["known_ids"])
+                print(f"📚 Загружено {len(result)} известных позиций из локального файла (старый формат)")
+                return result
             elif "known_items" in data and isinstance(data["known_items"], dict):
                 # Новый формат - объект с timestamp
-                return {normalize_url(item_id) for item_id in data["known_items"].keys()}
+                result = {normalize_url(item_id) for item_id in data["known_items"].keys()}
+                print(f"📚 Загружено {len(result)} известных позиций из локального файла")
+                return result
             else:
                 return set()
         except Exception:
@@ -295,6 +312,26 @@ def normalize_url(url: str) -> str:
 
 
 def save_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
+    """Сохраняет состояние в S3 и локальный файл"""
+    
+    # Сначала пробуем сохранить в S3
+    try:
+        from s3_storage import S3Storage
+        s3 = S3Storage()
+        if s3.save_new_items(known_ids, new_items or []):
+            print(f"💾 Состояние обновлено в S3")
+            # Также сохраняем локально как backup
+            _save_local_state(known_ids, new_items)
+            return
+    except Exception as e:
+        print(f"⚠️ Ошибка сохранения в S3: {e}, сохраняем локально")
+    
+    # Fallback на локальное сохранение
+    _save_local_state(known_ids, new_items)
+
+
+def _save_local_state(known_ids: Set[str], new_items: List[Dict] = None) -> None:
+    """Локальное сохранение state.json"""
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     # Загружаем существующие данные
