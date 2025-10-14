@@ -2,6 +2,7 @@ playwright
 python-dotenv
 requests
 beautifulsoup4
+boto3
 pytest
 pytest-cov
 flake8
